@@ -27,6 +27,9 @@ class CameraHandler:
         cv2.imshow('TextToTurtlebot Camera', cv_image)
         cv2.waitKey(1)
 
+        if self.target_object not in detected_objects and self.state_machine.get_current_state().value == TurtleBotState.OBJECT_FOUND: 
+            self.state_machine.pop_state(TurtleBotState.OBJECT_FOUND, TurtleBotStateSource.CAMERA)
+        
         if self.target_object not in detected_objects: return
 
         target_info = detected_objects_info[self.target_object]

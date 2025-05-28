@@ -21,13 +21,13 @@ class SimpleTargetNavigation(TargetNavigationStrategy):
         bounding_box_center = detected_object["bounding_box_coordinates"]["x1"] + (bounding_box_width / 2)
 
         # Camera has a resolution of 250x250
-        image_center = 125
+        image_center = 150
         offset_from_image_center = bounding_box_center - image_center
 
-        print([f"[TARGET NAVIGATION]: Detected object bounding box offset from center: {offset_from_image_center}"])
+        print(f"[TARGET NAVIGATION]: Detected object bounding box offset from center: {offset_from_image_center}")
 
         if abs(offset_from_image_center) >= 25:
-            normalized_turn_direction = self.map_to_minus1_to_1(offset_from_image_center, -125, 125)
+            normalized_turn_direction = self.map_to_minus1_to_1(offset_from_image_center, -150, 150)
             self.twist.twist.linear.x = 0.0
             self.twist.twist.angular.z = -0.1 * normalized_turn_direction
         else:

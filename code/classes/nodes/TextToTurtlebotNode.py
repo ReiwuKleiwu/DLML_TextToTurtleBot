@@ -32,7 +32,7 @@ class TextToTurtlebotNode(Node):
 
 
         # Initialize Sensor Handlers
-        self.camera_handler = CameraHandler(self.bridge, self.state_machine, 'person')
+        self.camera_handler = CameraHandler(self.bridge, self.state_machine, 'chair')
         self.lidar_handler = LIDARHandler(self.state_machine)
         self.ir_handler = IRHandler(self.state_machine)
 
