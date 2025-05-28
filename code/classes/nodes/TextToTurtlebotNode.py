@@ -1,6 +1,7 @@
 from rclpy.node import Node
 from sensor_msgs.msg import Image, LaserScan
 from geometry_msgs.msg import Twist
+from geometry_msgs.msg import TwistStamped
 from cv_bridge import CvBridge
 
 from classes.controllers.StateMachine import StateMachine, TurtleBotState
@@ -21,8 +22,8 @@ class TextToTurtlebotNode(Node):
         self.state_machine = StateMachine()
 
         # Initialize Twist and CMD-Publisher
-        self.twist = Twist()
-        self.cmd_publisher = self.create_publisher(Twist, '/robot_1/cmd_vel', 10)
+        self.twist = TwistStamped()
+        self.cmd_publisher = self.create_publisher(TwistStamped, '/robot_1/cmd_vel', 10)
 
         # Initialize Obstacle-Avoider as well as Explorer
         self.explorer = RandomExploration(self.twist, self.cmd_publisher)
@@ -31,7 +32,7 @@ class TextToTurtlebotNode(Node):
 
 
         # Initialize Sensor Handlers
-        self.camera_handler = CameraHandler(self.bridge, self.state_machine, 'bin')
+        self.camera_handler = CameraHandler(self.bridge, self.state_machine, 'person')
         self.lidar_handler = LIDARHandler(self.state_machine)
         self.ir_handler = IRHandler(self.state_machine)
 

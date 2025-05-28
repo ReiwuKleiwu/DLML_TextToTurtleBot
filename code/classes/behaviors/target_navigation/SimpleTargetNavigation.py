@@ -1,4 +1,4 @@
-from geometry_msgs.msg import Twist
+from geometry_msgs.msg import Twist, TwistStamped
 from rclpy.node import Publisher
 
 
@@ -6,7 +6,7 @@ from classes.behaviors.target_navigation.TargetNavigationStrategy import TargetN
 from classes.controllers.StateMachine import StateMachine
 
 class SimpleTargetNavigation(TargetNavigationStrategy): 
-    def __init__(self, state_machine: StateMachine, twist: Twist, cmd_publisher: Publisher):
+    def __init__(self, state_machine: StateMachine, twist: Twist | TwistStamped, cmd_publisher: Publisher):
         self.state_machine = state_machine
         self.twist = twist
         self.cmd_publisher = cmd_publisher
@@ -28,13 +28,13 @@ class SimpleTargetNavigation(TargetNavigationStrategy):
 
         if abs(offset_from_image_center) >= 25:
             normalized_turn_direction = self.map_to_minus1_to_1(offset_from_image_center, -125, 125)
-            self.twist.linear.x = 0.0
-            self.twist.angular.z = -0.1 * normalized_turn_direction
+            self.twist.twist.linear.x = 0.0
+            self.twist.twist.angular.z = -0.1 * normalized_turn_direction
         else:
-            self.twist.linear.x = 0.2
-            self.twist.angular.z = 0.0 
+            self.twist.twist.linear.x = 0.2
+            self.twist.twist.angular.z = 0.0 
 
-        self.cmd_publisher(self.twist)
+        self.cmd_publisher.publish(self.twist)
 
     def map_to_minus1_to_1(self, x, a, b):
         return 2 * (x - a) / (b - a) - 1
