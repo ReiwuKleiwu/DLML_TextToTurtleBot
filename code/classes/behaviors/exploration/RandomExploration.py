@@ -1,7 +1,10 @@
-import ExplorationStrategy
+from geometry_msgs.msg import Twist
+from rclpy.node import Publisher
+
+from classes.behaviors.exploration.ExplorationStrategy import ExplorationStrategy
 
 class RandomExploration(ExplorationStrategy):
-    def __init__(self, twist, cmd_publisher):
+    def __init__(self, twist: Twist, cmd_publisher: Publisher):
         self.twist = twist
         self.cmd_publisher = cmd_publisher
 

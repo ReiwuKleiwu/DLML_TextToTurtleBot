@@ -140,7 +140,7 @@ class ExploreAndDetectNode(Node):
 
         self.state.pop()
 
-    # TODO
+    # Done
     def lidar_callback(self, msg):
         # Extrahieren der Winkelinformationen aus dem LaserScan
         angle_min = msg.angle_min
@@ -256,11 +256,11 @@ class ExploreAndDetectNode(Node):
         if (self.SEARCHED_OBJECT_CLASS not in self.detected_objects): return
         self.change_state(ExploreAndDetectNode.State.OBJECT_FOUND, ExploreAndDetectNode.StateSource.CAMERA)
 
-    # TODO
+    # done
     def map_to_minus1_to_1(self, x, a, b):
         return 2 * (x - a) / (b - a) - 1
 
-    # TODO
+    # done
     def navigate_to_detected_object(self):
         detected_object = self.detected_objects_dict[self.SEARCHED_OBJECT_CLASS]
         print(detected_object)
@@ -297,6 +297,7 @@ class ExploreAndDetectNode(Node):
         self.twist.angular.z = 0.4 * self.state[-1][2]
         self.cmd_vel_pub.publish(self.twist)
 
+    # TODO
     def classify_room(self):
         objects_list = ', '.join(self.detected_objects)
 
@@ -327,6 +328,7 @@ class ExploreAndDetectNode(Node):
         self.get_logger().info(f"Raumtyp erkannt: {self.room_type}")
         self.room_classified = True
 
+    # TODO
     def pass_through_door(self):
         # Durch die Tür fahren (vorwärts)
         self.twist.linear.x = 0.3

@@ -3,8 +3,7 @@ import random
 from classes.controllers.StateMachine import StateMachine, TurtleBotState, TurtleBotStateSource
 
 class LIDARHandler:
-    def __init__(self, bridge, state_machine: StateMachine):
-        self.bridge = bridge
+    def __init__(self, state_machine: StateMachine):
         self.state_machine = state_machine
 
     def handle(self, msg):

@@ -1,12 +1,11 @@
 from ultralytics import YOLO
-import cv2
 
 class ObjectDetector:
     def __init__(self, model_path: str):
         self._model = self.create_custom_yolo_model(model_path)
 
     def create_custom_yolo_model(self, model_path: str):
-        model = YOLO(model_path)
+        model = YOLO(f"{model_path}/yolov8s-worldv2.pt")
         model.set_classes(
             ["table", "monitor", "closed door", "open door", "chair", "computer",
              "person", "fridge", "fire extinguisher", "window", "blackboard",
@@ -14,7 +13,7 @@ class ObjectDetector:
              "bin"
              ]
         )
-        model.save(f"custom_{model_path}")
+        model.save(f"{model_path}/yolo_model_custom.pt")
 
         return model
 

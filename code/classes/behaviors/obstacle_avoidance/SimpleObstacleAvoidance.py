@@ -1,8 +1,11 @@
-import ObstacleAvoidanceStrategy
-from classes.controllers.StateMachine import StateMachine, TurtleBotState, TurtleBotStateSource
+from geometry_msgs.msg import Twist
+from rclpy.node import Publisher
 
-class SimpleObstacleAvoidance(ObstacleAvoidanceStrategy.ObstacleAvoidanceStrategy):
-    def __init__(self, state_machine: StateMachine, twist, cmd_publisher):
+from classes.behaviors.obstacle_avoidance.ObstacleAvoidanceStrategy import ObstacleAvoidanceStrategy
+from classes.controllers.StateMachine import StateMachine
+
+class SimpleObstacleAvoidance(ObstacleAvoidanceStrategy):
+    def __init__(self, state_machine: StateMachine, twist: Twist, cmd_publisher: Publisher):
         self.state_machine = state_machine
         self.twist = twist
         self.cmd_publisher = cmd_publisher

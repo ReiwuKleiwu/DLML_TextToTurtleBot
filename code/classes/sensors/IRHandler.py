@@ -3,7 +3,7 @@ from irobot_create_msgs.msg import IrIntensityVector, IrIntensity
 from classes.controllers.StateMachine import StateMachine, TurtleBotState, TurtleBotStateSource
 
 class IRHandler:
-    def __init__(self, state_machine: StateMachine, min_distance):
+    def __init__(self, state_machine: StateMachine, min_distance = 175):
         self.state_machine = state_machine
         self.min_distance = min_distance
 

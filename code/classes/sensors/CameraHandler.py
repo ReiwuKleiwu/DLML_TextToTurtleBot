@@ -1,14 +1,15 @@
 import cv2
+from cv_bridge import CvBridge
 
 from classes.controllers.StateMachine import StateMachine, TurtleBotState, TurtleBotStateSource
 from classes.perception.ObjectDetector import ObjectDetector
 
 class CameraHandler:
-    def __init__(self, bridge, state_machine: StateMachine, target_object: str):
+    def __init__(self, bridge: CvBridge, state_machine: StateMachine, target_object: str):
         self.target_object = target_object
         self.bridge = bridge
         self.state_machine = state_machine
-        self.object_detector = ObjectDetector(model_path='yolov8s-worldv2.pt')
+        self.object_detector = ObjectDetector(model_path='models')
 
     def handle(self, msg):
         # Get camera image
@@ -34,12 +35,14 @@ class CameraHandler:
             TurtleBotState.OBJECT_FOUND,
             TurtleBotStateSource.CAMERA,
             data= {
-                "object": self.target_object,
-                "coordinates": {
-                    "x1": target_info['x1'],
-                    "y1": target_info['y1'],
-                    "x2": target_info['x2'],
-                    "y2": target_info['y2']
+                "detected_target_object": {
+                    "class": self.target_object,
+                    "bounding_box_coordinates": {
+                        "x1": target_info['x1'],
+                        "y1": target_info['y1'],
+                        "x2": target_info['x2'],
+                        "y2": target_info['y2']
+                    }   
                 }
             }
         )
