@@ -21,7 +21,7 @@ class CameraHandler:
 
             color = (0, 0, 255) if (detected_object_class == self.target_object) else (0, 255, 0)
 
-            cv2.rectangle(cv_image, (detected_object_info['x1'], detected_object_info['y1']), (detected_objects_info['x2'], detected_objects_info['y2']), color, 2)
+            cv2.rectangle(cv_image, (detected_object_info['x1'], detected_object_info['y1']), (detected_object_info['x2'], detected_object_info['y2']), color, 2)
             cv2.putText(cv_image, detected_object_class, (detected_object_info['x1'], detected_object_info['y1'] - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
 
         cv2.imshow('TextToTurtlebot Camera', cv_image)
