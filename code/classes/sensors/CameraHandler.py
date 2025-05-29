@@ -14,6 +14,8 @@ class CameraHandler:
     def handle(self, msg):
         # Get camera image
         cv_image = self.bridge.imgmsg_to_cv2(msg, desired_encoding='bgr8')
+        camera_height, camera_width = cv_image.shape[:2]
+
         detected_objects, detected_objects_info = self.object_detector.detect(cv_image)
 
         for detected_object_class in detected_objects:
@@ -35,7 +37,11 @@ class CameraHandler:
         target_info = detected_objects_info[self.target_object]
 
         target_state_data = {
-                "detected_target_object": {
+                "object_found_data": {
+                    "camera": {
+                        "width": camera_width,
+                        "height": camera_height
+                    },
                     "class": self.target_object,
                     "bounding_box_coordinates": {
                         "x1": target_info['x1'],
