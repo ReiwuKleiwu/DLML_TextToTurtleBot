@@ -11,6 +11,20 @@ class CameraHandler:
         self.state_machine = state_machine
         self.object_detector = ObjectDetector(model_path='models')
 
+        self.target_close_counter = 0
+        self.required_frames = 5
+        self.target_area_threshold = 0.15
+
+
+    def is_target_close(self, target_info, camera_width, camera_height):
+        box_width = target_info['x2'] - target_info['x1']
+        box_height = target_info['y2'] - target_info['y1']
+        box_area = box_width * box_height
+        image_area = camera_width * camera_height
+        
+        # if object takes up enough area of the total camera dimensions
+        return box_area / image_area > self.target_area_threshold
+
     def handle(self, msg):
         # Get camera image
         cv_image = self.bridge.imgmsg_to_cv2(msg, desired_encoding='bgr8')
@@ -30,11 +44,17 @@ class CameraHandler:
         cv2.waitKey(1)
 
         if self.target_object not in detected_objects and self.state_machine.get_current_state().value == TurtleBotState.OBJECT_FOUND: 
+            self.target_close_counter = 0
             self.state_machine.pop_state(TurtleBotState.OBJECT_FOUND, TurtleBotStateSource.CAMERA)
         
         if self.target_object not in detected_objects: return
 
         target_info = detected_objects_info[self.target_object]
+
+        if self.is_target_close(target_info, camera_width, camera_height):
+            self.target_close_counter += 1
+        else:
+            self.target_close_counter = 0
 
         target_state_data = {
                 "object_found_data": {
@@ -51,13 +71,24 @@ class CameraHandler:
                     }   
                 }
             }
-
-        # Update position data if current state is already OBJECT_FOUND
-        if self.state_machine.get_current_state().value == TurtleBotState.OBJECT_FOUND:
+        
+        if self.target_close_counter >= self.required_frames:
+            # Objekt wurde für ausreichend Frames als "nah" eingestuft -> OBJECT_REACHED
+            self.state_machine.pop_state(
+                TurtleBotState.OBJECT_FOUND,
+                TurtleBotStateSource.CAMERA
+            )
+            self.state_machine.push_state(
+                TurtleBotState.OBJECT_REACHED,
+                TurtleBotStateSource.CAMERA,
+                data=target_state_data
+            )
+        elif self.state_machine.get_current_state().value == TurtleBotState.OBJECT_FOUND:
             self.state_machine.get_current_state().set_data(target_state_data)
         else:
+            # Objekt wurde erstmals gesehen -> OBJECT_FOUND
             self.state_machine.push_state(
                 TurtleBotState.OBJECT_FOUND,
                 TurtleBotStateSource.CAMERA,
-                data= target_state_data
+                data=target_state_data
             )
