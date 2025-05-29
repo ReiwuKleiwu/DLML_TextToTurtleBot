@@ -13,8 +13,8 @@ from classes.sensors.IRHandler import IRHandler
 from classes.sensors.LIDARHandler import LIDARHandler
 
 class TextToTurtlebotNode(Node):
-    def __init__(self):
-        super().__init__('TextToTurtlebotNode')
+    def __init__(self, namespace: str = ''):
+        super().__init__('TextToTurtlebotNode', namespace=namespace)
 
         self.bridge = CvBridge()
 
@@ -23,7 +23,7 @@ class TextToTurtlebotNode(Node):
 
         # Initialize Twist and CMD-Publisher
         self.twist = TwistStamped()
-        self.cmd_publisher = self.create_publisher(TwistStamped, '/robot_1/cmd_vel', 10)
+        self.cmd_publisher = self.create_publisher(TwistStamped, f"{self.get_namespace()}/cmd_vel", 10)
 
         # Initialize Obstacle-Avoider as well as Explorer
         self.explorer = RandomExploration(self.twist, self.cmd_publisher)
@@ -39,14 +39,14 @@ class TextToTurtlebotNode(Node):
         # Register Sensor Handlers
         self.camera_subscription = self.create_subscription(
             Image,
-            '/robot_1/oakd/rgb/preview/image_raw',
+            f"{self.get_namespace()}/oakd/rgb/preview/image_raw",
             self.camera_handler.handle,
             10
         )
 
         self.lidar_subscription = self.create_subscription(
             LaserScan,
-            '/robot_1/scan',
+            f"{self.get_namespace()}/scan",
             self.lidar_handler.handle,
             10
         )
@@ -70,6 +70,6 @@ class TextToTurtlebotNode(Node):
                 #print('[INFO]: Target Object found...')
                 self.target_navigator.execute()
             case TurtleBotState.OBJECT_REACHED:
-                print('[INFO]: Target Object reached...')
+                print('[INFO]: Target Object reached.')
             case _:
                 print(f'[INFO]: Unknown state: {current_state.value}')

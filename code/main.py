@@ -7,7 +7,7 @@ from classes.controllers.MovementThread import MovementThread
 def main(args=None):
     rclpy.init(args=args)
 
-    text_to_turtlebot_node = TextToTurtlebotNode()
+    text_to_turtlebot_node = TextToTurtlebotNode(namespace="robot_1")
 
     try:
         movement_thread = MovementThread(2, text_to_turtlebot_node)
