@@ -32,7 +32,7 @@ class TextToTurtlebotNode(Node):
 
 
         # Initialize Sensor Handlers
-        self.camera_handler = CameraHandler(self.bridge, self.state_machine, 'chair')
+        self.camera_handler = CameraHandler(self.bridge, self.state_machine, 'person')
         self.lidar_handler = LIDARHandler(self.state_machine)
         self.ir_handler = IRHandler(self.state_machine)
 
@@ -61,13 +61,13 @@ class TextToTurtlebotNode(Node):
 
         match current_state.value:
             case TurtleBotState.EXPLORE:
-                print('[INFO]: Exploring...')
+                # print('[INFO]: Exploring...')
                 self.explorer.execute()
             case TurtleBotState.AVOID_OBSTACLE:
-                print('[INFO]: Avoiding obstacle...')
+                # print('[INFO]: Avoiding obstacle...')
                 self.obstacle_avoider.execute()
             case TurtleBotState.OBJECT_FOUND:
-                print('[INFO]: Target Object found...')
+                #print('[INFO]: Target Object found...')
                 self.target_navigator.execute()
             case TurtleBotState.OBJECT_REACHED:
                 print('[INFO]: Target Object reached...')
