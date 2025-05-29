@@ -21,8 +21,8 @@ class CameraHandler:
 
             color = (0, 0, 255) if (detected_object_class == self.target_object) else (0, 255, 0)
 
-            cv2.rectangle(cv_image, (detected_object_info['x1'], detected_object_info['y1']), (detected_object_info['x2'], detected_object_info['y2']), color, 2)
-            cv2.putText(cv_image, detected_object_class, (detected_object_info['x1'], detected_object_info['y1'] - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+            cv2.rectangle(cv_image, (detected_object_info['x1'], detected_object_info['y1']), (detected_object_info['x2'], detected_object_info['y2']), color, 1)
+            cv2.putText(cv_image, detected_object_class, (detected_object_info['x1'], detected_object_info['y1'] - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 1)
 
         cv2.imshow('TextToTurtlebot Camera', cv_image)
         cv2.waitKey(1)
@@ -34,10 +34,7 @@ class CameraHandler:
 
         target_info = detected_objects_info[self.target_object]
 
-        self.state_machine.push_state(
-            TurtleBotState.OBJECT_FOUND,
-            TurtleBotStateSource.CAMERA,
-            data= {
+        target_state_data = {
                 "detected_target_object": {
                     "class": self.target_object,
                     "bounding_box_coordinates": {
@@ -48,4 +45,13 @@ class CameraHandler:
                     }   
                 }
             }
-        )
+
+        # Update position data if current state is already OBJECT_FOUND
+        if self.state_machine.get_current_state().value == TurtleBotState.OBJECT_FOUND:
+            self.state_machine.get_current_state().set_data(target_state_data)
+        else:
+            self.state_machine.push_state(
+                TurtleBotState.OBJECT_FOUND,
+                TurtleBotStateSource.CAMERA,
+                data= target_state_data
+            )
