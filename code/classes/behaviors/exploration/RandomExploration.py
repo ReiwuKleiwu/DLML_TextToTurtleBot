@@ -9,6 +9,6 @@ class RandomExploration(ExplorationStrategy):
         self.cmd_publisher = cmd_publisher
 
     def execute(self):
-        self.twist.twist.linear.x = 0.2
-        self.twist.twist.angular.z = 0.0
+        self.twist.linear.x = 0.2
+        self.twist.angular.z = 0.0
         self.cmd_publisher.publish(self.twist)

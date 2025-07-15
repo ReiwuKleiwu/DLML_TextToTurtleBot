@@ -5,15 +5,15 @@ from classes.controllers.StateMachine import StateMachine, TurtleBotState, Turtl
 from classes.perception.ObjectDetector import ObjectDetector
 
 class CameraHandler:
-    def __init__(self, bridge: CvBridge, state_machine: StateMachine, target_object: str):
-        self.target_object = target_object
+    def __init__(self, bridge: CvBridge, state_machine: StateMachine):
+        self.target_object = None
         self.bridge = bridge
         self.state_machine = state_machine
         self.object_detector = ObjectDetector(model_path='models')
 
         self.target_close_counter = 0
         self.required_frames = 5
-        self.target_area_threshold = 0.15
+        self.target_area_threshold = 0.30
 
 
     def is_target_close(self, target_info, camera_width, camera_height):
@@ -24,8 +24,16 @@ class CameraHandler:
         
         # if object takes up enough area of the total camera dimensions
         return box_area / image_area > self.target_area_threshold
+    
+
+    def get_target_object(self):
+        target_object = self.state_machine.get_current_state().data.get("target_object", None)
+        if target_object is not None:
+            self.target_object = target_object
 
     def handle(self, msg):
+        self.get_target_object()
+
         # Get camera image
         cv_image = self.bridge.imgmsg_to_cv2(msg, desired_encoding='bgr8')
         camera_height, camera_width = cv_image.shape[:2]
@@ -78,11 +86,11 @@ class CameraHandler:
                 TurtleBotState.OBJECT_FOUND,
                 TurtleBotStateSource.CAMERA
             )
-            self.state_machine.push_state(
-                TurtleBotState.OBJECT_REACHED,
-                TurtleBotStateSource.CAMERA,
-                data=target_state_data
+            self.state_machine.pop_state(
+                TurtleBotState.EXPLORE,
+                TurtleBotStateSource.USER
             )
+            self.target_object = None
         elif self.state_machine.get_current_state().value == TurtleBotState.OBJECT_FOUND:
             self.state_machine.get_current_state().set_data(target_state_data)
         else:

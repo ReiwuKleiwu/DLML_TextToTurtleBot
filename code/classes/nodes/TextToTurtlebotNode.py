@@ -4,7 +4,7 @@ from geometry_msgs.msg import Twist
 from geometry_msgs.msg import TwistStamped
 from cv_bridge import CvBridge
 
-from classes.controllers.StateMachine import StateMachine, TurtleBotState
+from classes.controllers.StateMachine import StateMachine, TurtleBotState, TurtleBotStateSource
 from classes.behaviors.obstacle_avoidance.SimpleObstacleAvoidance import SimpleObstacleAvoidance
 from classes.behaviors.exploration.RandomExploration import RandomExploration
 from classes.behaviors.target_navigation.SimpleTargetNavigation import SimpleTargetNavigation
@@ -22,8 +22,8 @@ class TextToTurtlebotNode(Node):
         self.state_machine = StateMachine()
 
         # Initialize Twist and CMD-Publisher
-        self.twist = TwistStamped()
-        self.cmd_publisher = self.create_publisher(TwistStamped, f"{self.get_namespace()}/cmd_vel", 10)
+        self.twist = Twist()
+        self.cmd_publisher = self.create_publisher(Twist, f"{self.get_namespace()}/cmd_vel", 10)
 
         # Initialize Obstacle-Avoider as well as Explorer
         self.explorer = RandomExploration(self.twist, self.cmd_publisher)
@@ -32,7 +32,7 @@ class TextToTurtlebotNode(Node):
 
 
         # Initialize Sensor Handlers
-        self.camera_handler = CameraHandler(self.bridge, self.state_machine, 'person')
+        self.camera_handler = CameraHandler(self.bridge, self.state_machine)
         self.lidar_handler = LIDARHandler(self.state_machine)
         self.ir_handler = IRHandler(self.state_machine)
 
@@ -53,6 +53,13 @@ class TextToTurtlebotNode(Node):
 
         # TODO: Add subscriptions for IR and Bumper
 
+    def find_target(self, target: str):
+        self.state_machine.push_state(
+            TurtleBotState.EXPLORE,
+            TurtleBotStateSource.USER,
+            {"target_object": target}
+        )
+
     def handle_state(self):
         current_state = self.state_machine.get_current_state()
 
@@ -69,7 +76,7 @@ class TextToTurtlebotNode(Node):
             case TurtleBotState.OBJECT_FOUND:
                 #print('[INFO]: Target Object found...')
                 self.target_navigator.execute()
-            case TurtleBotState.OBJECT_REACHED:
-                print('[INFO]: Target Object reached.')
+            case TurtleBotState.IDLE:
+                print('[INFO]: Idling...')
             case _:
                 print(f'[INFO]: Unknown state: {current_state.value}')

@@ -1,14 +1,15 @@
 from enum import Enum
 
 class TurtleBotState(Enum):
-    EXPLORE = 0
-    AVOID_OBSTACLE = 1
-    OBJECT_FOUND = 2
-    OBJECT_REACHED = 3
-    EXIT = 4
+    IDLE = 0,
+    EXPLORE = 1,
+    AVOID_OBSTACLE = 2
+    OBJECT_FOUND = 3
+    OBJECT_REACHED = 4
+    EXIT = 5
 
 class TurtleBotStateSource(Enum):
-    GOAL = 0
+    USER = 0
     LIDAR = 1
     IR = 2
     BUMPER = 3
@@ -30,14 +31,14 @@ class State:
 class StateMachine:
     def __init__(self):
         self.states = [State(
-            TurtleBotState.EXPLORE,
-            TurtleBotStateSource.GOAL,
+            TurtleBotState.IDLE,
+            TurtleBotStateSource.USER,
         )]
         self.log_state_stack()
 
     def push_state(self, new_state: TurtleBotState, new_state_source: TurtleBotStateSource, data: dict = None):
         # Check if the most recent state matches the new state
-        if self.get_current_state().value == new_state: return
+        if self.get_current_state().value == new_state and self.get_current_state().source != TurtleBotStateSource.USER: return
 
         # print(f"[STATE CHANGE]: Pushed state: {new_state} |  Source: {new_state_source} | Data: {data}")
         self.states.append(State(new_state, new_state_source, data))

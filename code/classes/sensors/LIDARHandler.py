@@ -19,7 +19,7 @@ class LIDARHandler:
 
         if front_distance < 0.5:
             print("[LIDAR]: Detected obstacle closer than 0.5m")
-            direction = random.choice([-1, 1])
+            direction = 1
             self.state_machine.push_state(TurtleBotState.AVOID_OBSTACLE, TurtleBotStateSource.LIDAR, data={"direction": direction})
         else:
             self.state_machine.pop_state(TurtleBotState.AVOID_OBSTACLE, TurtleBotStateSource.LIDAR)

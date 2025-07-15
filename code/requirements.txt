@@ -5,3 +5,5 @@ irobot-create-msgs
 ollama
 ultralytics
 numpy == 1.26.4
+bitsandbytes
+accelerate

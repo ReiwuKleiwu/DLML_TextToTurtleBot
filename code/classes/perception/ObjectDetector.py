@@ -1,4 +1,4 @@
-from ultralytics import YOLOE
+from ultralytics import YOLO
 import logging
 
 # Necessary in oder to prevent yolo from spamming the console
@@ -9,16 +9,16 @@ class ObjectDetector:
         self._model = self.create_custom_yolo_model(model_path)
 
     def create_custom_yolo_model(self, model_path: str):
-        model = YOLOE(f"{model_path}/yoloe-11l-seg.pt")
+        model = YOLO(f"{model_path}/yolov8s-worldv2.pt")
 
         classes = ["table", "monitor", "closed door", "open door", "chair", "computer",
              "person", "fridge", "fire extinguisher", "window", "blackboard",
              "kitchen cabinet", "wall", "toilet", "towel", "radiator", "desk",
-             "bin"
+             "bin", "door"
              ]
 
         model.set_classes(
-            classes, model.get_text_pe(classes)
+            classes
         )
         
         model.save(f"{model_path}/yolo_model_custom.pt")

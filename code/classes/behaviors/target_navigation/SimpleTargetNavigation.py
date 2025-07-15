@@ -28,11 +28,11 @@ class SimpleTargetNavigation(TargetNavigationStrategy):
 
         if abs(offset_from_image_center) >= 25:
             normalized_turn_direction = self.map_to_minus1_to_1(offset_from_image_center, -(camera_resolution_width / 2), camera_resolution_width / 2)
-            self.twist.twist.linear.x = 0.0
-            self.twist.twist.angular.z = -1 * normalized_turn_direction
+            self.twist.linear.x = 0.0
+            self.twist.angular.z = -1 * normalized_turn_direction
         else:
-            self.twist.twist.linear.x = 0.2
-            self.twist.twist.angular.z = 0.0 
+            self.twist.linear.x = 0.2
+            self.twist.angular.z = 0.0
 
         self.cmd_publisher.publish(self.twist)
 
