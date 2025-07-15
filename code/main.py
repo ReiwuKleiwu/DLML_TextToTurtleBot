@@ -1,4 +1,5 @@
 import rclpy
+import os
 
 from classes.nodes.TextToTurtlebotNode import TextToTurtlebotNode
 from classes.controllers.MovementThread import MovementThread
@@ -7,9 +8,8 @@ from classes.controllers.MovementThread import MovementThread
 def main(args=None):
     rclpy.init(args=args)
 
-    text_to_turtlebot_node = TextToTurtlebotNode(namespace="robot_1")
+    text_to_turtlebot_node = TextToTurtlebotNode(namespace="", use_turtlebot_sim=True)
     text_to_turtlebot_node.find_target('chair')
-    text_to_turtlebot_node.find_target('door')
 
     try:
         movement_thread = MovementThread(2, text_to_turtlebot_node)

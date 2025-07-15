@@ -50,6 +50,8 @@ from ultralytics import YOLO
 
 import ollama
 
+from classes.utils.TwistWrapper import TwistWrapper
+
 
 class ExploreAndDetectNode(Node):
     IR_DISTANCE_MIN = 175  # smaller = bigger dist; bigger = later object detection
@@ -69,7 +71,7 @@ class ExploreAndDetectNode(Node):
         BUMPER = 3
         CAMERA = 4
 
-    def __init__(self):
+    def __init__(self, use_turtlebot_sim: bool = False):
         super().__init__('explore_and_detect_node')
 
         self.state = [(ExploreAndDetectNode.State.EXPLORE, ExploreAndDetectNode.StateSource.GOAL, None)]
@@ -90,10 +92,13 @@ class ExploreAndDetectNode(Node):
         )
 
         # Publikator für Bewegungen (Twist-Nachricht)
-        self.cmd_vel_pub = self.create_publisher(Twist, '/robot_1/cmd_vel', 10)
+        # Use TwistStamped for simulator, Twist for physical robot
+        from geometry_msgs.msg import TwistStamped
+        msg_type = TwistStamped if use_turtlebot_sim else Twist
+        self.cmd_vel_pub = self.create_publisher(msg_type, '/robot_1/cmd_vel', 10)
 
         # Initialisierung von Bewegungssteuerung
-        self.twist = Twist()
+        self.twist = TwistWrapper(use_stamped=use_turtlebot_sim)
         self.lidar_data = []
 
         # Detektierte Objekte und Raumklassifizierung
@@ -280,14 +285,14 @@ class ExploreAndDetectNode(Node):
         else:
             self.twist.linear.x = 0.2
 
-        self.cmd_vel_pub.publish(self.twist)
+        self.cmd_vel_pub.publish(self.twist.get_message())
 
     # done
     def random_exploration(self):
         # Zufällige Bewegungssteuerung für die Erkundung
         self.twist.linear.x = 0.2  # Vorwärtsbewegung
         self.twist.angular.z = 0.0  # gerade aus fahren
-        self.cmd_vel_pub.publish(self.twist)
+        self.cmd_vel_pub.publish(self.twist.get_message())
 
     # done
     def avoid_obstacle(self):
@@ -295,7 +300,7 @@ class ExploreAndDetectNode(Node):
         self.twist.linear.x = 0.0  # Stoppen
 
         self.twist.angular.z = 0.4 * self.state[-1][2]
-        self.cmd_vel_pub.publish(self.twist)
+        self.cmd_vel_pub.publish(self.twist.get_message())
 
     # TODO
     def classify_room(self):
@@ -333,7 +338,7 @@ class ExploreAndDetectNode(Node):
         # Durch die Tür fahren (vorwärts)
         self.twist.linear.x = 0.3
         self.twist.angular.z = 0.0
-        self.cmd_vel_pub.publish(self.twist)
+        self.cmd_vel_pub.publish(self.twist.get_message())
 
         # Warten für eine Weile (um anzunehmen, dass der Turtlebot durch die Tür gefahren ist)
         self.get_logger().info("Fahre durch die Tür...")
@@ -391,7 +396,11 @@ class MovementThread(threading.Thread):
 
 def main(args=None):
     rclpy.init(args=args)
-    node = ExploreAndDetectNode()
+    
+    # Check for simulator flag in environment variable or command line
+    use_turtlebot_sim = os.environ.get('USE_TURTLEBOT_SIM', 'false').lower() == 'true'
+    
+    node = ExploreAndDetectNode(use_turtlebot_sim=use_turtlebot_sim)
 
     try:
         movement_thread = MovementThread(2, node)

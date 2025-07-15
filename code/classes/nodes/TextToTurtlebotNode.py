@@ -11,9 +11,10 @@ from classes.behaviors.target_navigation.SimpleTargetNavigation import SimpleTar
 from classes.sensors.CameraHandler import CameraHandler
 from classes.sensors.IRHandler import IRHandler
 from classes.sensors.LIDARHandler import LIDARHandler
+from classes.utils.TwistWrapper import TwistWrapper
 
 class TextToTurtlebotNode(Node):
-    def __init__(self, namespace: str = ''):
+    def __init__(self, namespace: str = '', use_turtlebot_sim: bool = False):
         super().__init__('TextToTurtlebotNode', namespace=namespace)
 
         self.bridge = CvBridge()
@@ -22,8 +23,11 @@ class TextToTurtlebotNode(Node):
         self.state_machine = StateMachine()
 
         # Initialize Twist and CMD-Publisher
-        self.twist = Twist()
-        self.cmd_publisher = self.create_publisher(Twist, f"{self.get_namespace()}/cmd_vel", 10)
+        self.twist = TwistWrapper(use_stamped=use_turtlebot_sim)
+        
+        # Use TwistStamped for simulator, Twist for physical robot
+        msg_type = TwistStamped if use_turtlebot_sim else Twist
+        self.cmd_publisher = self.create_publisher(msg_type, f"/cmd_vel", 10)
 
         # Initialize Obstacle-Avoider as well as Explorer
         self.explorer = RandomExploration(self.twist, self.cmd_publisher)
@@ -39,14 +43,14 @@ class TextToTurtlebotNode(Node):
         # Register Sensor Handlers
         self.camera_subscription = self.create_subscription(
             Image,
-            f"{self.get_namespace()}/oakd/rgb/preview/image_raw",
+            f"/oakd/rgb/preview/image_raw",
             self.camera_handler.handle,
             10
         )
 
         self.lidar_subscription = self.create_subscription(
             LaserScan,
-            f"{self.get_namespace()}/scan",
+            f"/scan",
             self.lidar_handler.handle,
             10
         )
