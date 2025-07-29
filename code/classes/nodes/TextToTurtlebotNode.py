@@ -2,6 +2,7 @@ from rclpy.node import Node
 from sensor_msgs.msg import Image, LaserScan
 from geometry_msgs.msg import Twist
 from geometry_msgs.msg import TwistStamped
+from tf2_msgs.msg import TFMessage
 from cv_bridge import CvBridge
 
 from classes.controllers.StateMachine import StateMachine, TurtleBotState, TurtleBotStateSource
@@ -11,6 +12,7 @@ from classes.behaviors.target_navigation.SimpleTargetNavigation import SimpleTar
 from classes.sensors.CameraHandler import CameraHandler
 from classes.sensors.IRHandler import IRHandler
 from classes.sensors.LIDARHandler import LIDARHandler
+from classes.topics.TFSubscriber import TFSubscriber
 from classes.utils.TwistWrapper import TwistWrapper
 
 class TextToTurtlebotNode(Node):
@@ -39,6 +41,7 @@ class TextToTurtlebotNode(Node):
         self.camera_handler = CameraHandler(self.bridge, self.state_machine)
         self.lidar_handler = LIDARHandler(self.state_machine)
         self.ir_handler = IRHandler(self.state_machine)
+        self.tf_subscriber = TFSubscriber(self, base_link_frame="base_link")
 
         # Register Sensor Handlers
         self.camera_subscription = self.create_subscription(
