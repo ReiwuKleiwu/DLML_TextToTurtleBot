@@ -1,12 +1,18 @@
 import random
 
 from classes.controllers.StateMachine import StateMachine, TurtleBotState, TurtleBotStateSource
+from classes.perception.ObjectPositionEstimator import ObjectPositionEstimator
 
 class LIDARHandler:
-    def __init__(self, state_machine: StateMachine):
+    def __init__(self, state_machine: StateMachine, position_estimator: ObjectPositionEstimator = None):
         self.state_machine = state_machine
+        self.position_estimator = position_estimator
 
     def handle(self, msg):
+        # Update position estimator with latest LIDAR data if available
+        if self.position_estimator is not None:
+            self.position_estimator.update_lidar_data(msg)
+        
         angle_min = msg.angle_min
         angle_increment = msg.angle_increment
 

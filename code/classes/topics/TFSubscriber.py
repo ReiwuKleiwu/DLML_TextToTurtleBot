@@ -72,6 +72,101 @@ class TFSubscriber:
         rotation = self.latest_transform.transform.rotation
         return (rotation.x, rotation.y, rotation.z, rotation.w)
     
+    def get_transform_between_frames(self, target_frame: str, source_frame: str):
+        """
+        Get transform between any two frames.
+        
+        Args:
+            target_frame: Target frame ID
+            source_frame: Source frame ID
+            
+        Returns:
+            TransformStamped: Transform from source to target frame, or None if not available
+        """
+        try:
+            transform = self.tf_buffer.lookup_transform(
+                target_frame,
+                source_frame,
+                rclpy.time.Time()
+            )
+            return transform
+        except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
+            return None
+    
+    def get_position_2d(self):
+        """
+        Get the current 2D position of base_link in the world frame.
+        
+        Returns:
+            tuple: (x, y) position or None if no transform available
+        """
+        if self.latest_transform is None:
+            return None
+            
+        translation = self.latest_transform.transform.translation
+        return (translation.x, translation.y)
+    
+    def get_position_of_frame_2d(self, frame_id: str):
+        """
+        Get the 2D position of a specific frame in the world frame.
+        
+        Args:
+            frame_id: Frame ID to get position for
+            
+        Returns:
+            tuple: (x, y) position or None if no transform available
+        """
+        try:
+            transform = self.tf_buffer.lookup_transform(
+                self.world_frame,
+                frame_id,
+                rclpy.time.Time()
+            )
+            translation = transform.transform.translation
+            return (translation.x, translation.y)
+        except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
+            return None
+        """
+        Get the position of a specific frame in the world frame.
+        
+        Args:
+            frame_id: Frame ID to get position for
+            
+        Returns:
+            tuple: (x, y, z) position or None if no transform available
+        """
+        try:
+            transform = self.tf_buffer.lookup_transform(
+                self.world_frame,
+                frame_id,
+                rclpy.time.Time()
+            )
+            translation = transform.transform.translation
+            return (translation.x, translation.y, translation.z)
+        except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
+            return None
+    
+    def get_orientation_of_frame(self, frame_id: str):
+        """
+        Get the orientation of a specific frame in the world frame.
+        
+        Args:
+            frame_id: Frame ID to get orientation for
+            
+        Returns:
+            tuple: (x, y, z, w) quaternion or None if no transform available
+        """
+        try:
+            transform = self.tf_buffer.lookup_transform(
+                self.world_frame,
+                frame_id,
+                rclpy.time.Time()
+            )
+            rotation = transform.transform.rotation
+            return (rotation.x, rotation.y, rotation.z, rotation.w)
+        except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
+            return None
+
     # def get_transform(self):
     #     """
     #     Get the latest transform.
