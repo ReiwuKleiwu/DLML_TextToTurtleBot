@@ -20,6 +20,9 @@ class CameraHandler:
         # Reference to depth camera handler for sharing detection data
         self.depth_camera_handler = depth_camera_handler
 
+        # Store world coordinates from depth handler
+        self.world_coordinates = {}
+
 
     def is_target_close(self, target_info, camera_width, camera_height):
         box_width = target_info['x2'] - target_info['x1']
@@ -37,6 +40,10 @@ class CameraHandler:
             # Target changed, reset the selector
             self.target_object = target_object
             self.target_selector.reset()
+
+    def set_world_coordinates(self, world_coordinates):
+        """Set world coordinates from depth handler"""
+        self.world_coordinates = world_coordinates
 
     def handle(self, msg):
         self.get_target_object()
@@ -59,28 +66,67 @@ class CameraHandler:
         if self.depth_camera_handler:
             self.depth_camera_handler.set_shared_detections((all_detections, self.target_object, selected_target_info))
 
-        # Draw all detected objects
+        # Draw all detected objects with world coordinates
         for detected_object_class in detected_objects:
             if detected_object_class in all_detections:
-                for detection in all_detections[detected_object_class]:
+                for i, detection in enumerate(all_detections[detected_object_class]):
                     # Highlight the selected target differently
-                    if (detected_object_class == self.target_object and 
-                        selected_target_info and 
+                    if (detected_object_class == self.target_object and
+                        selected_target_info and
                         detection == selected_target_info):
                         color = (0, 0, 255)  # Red for selected target
-                        thickness = 1
                     elif detected_object_class == self.target_object:
                         color = (0, 165, 255)  # Orange for other targets of same class
-                        thickness = 1
                     else:
                         color = (0, 255, 0)  # Green for other objects
-                        thickness = 1
 
-                    cv2.rectangle(cv_image, (detection['x1'], detection['y1']), 
-                                (detection['x2'], detection['y2']), color, thickness)
-                    cv2.putText(cv_image, detected_object_class, 
-                              (detection['x1'], detection['y1'] - 10), 
-                              cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, thickness)
+                    cv2.rectangle(cv_image, (detection['x1'], detection['y1']),
+                                (detection['x2'], detection['y2']), color, 1)
+
+                    # Create label with class name and world coordinates
+                    label_text = detected_object_class
+
+                    # Add world coordinates if available - match by bounding box coordinates
+                    if detected_object_class in self.world_coordinates:
+                        # Find matching object by comparing bounding box hash
+                        matching_obj = None
+                        detection_hash = hash((detection['x1'], detection['y1'], detection['x2'], detection['y2']))
+
+                        for obj_info in self.world_coordinates[detected_object_class]:
+                            if 'bbox_hash' in obj_info and obj_info['bbox_hash'] == detection_hash:
+                                matching_obj = obj_info
+                                break
+                            # Fallback to coordinate comparison for backwards compatibility
+                            elif (obj_info['detection']['x1'] == detection['x1'] and
+                                  obj_info['detection']['y1'] == detection['y1'] and
+                                  obj_info['detection']['x2'] == detection['x2'] and
+                                  obj_info['detection']['y2'] == detection['y2']):
+                                matching_obj = obj_info
+                                break
+
+                        if matching_obj:
+                            if matching_obj['world_coords']:
+                                wx, wy, wz = matching_obj['world_coords']
+                                label_text += f" W:({wx:.2f}, {wy:.2f}, {wz:.2f}m)"
+                            elif matching_obj['distance_mm']:
+                                label_text += f" {matching_obj['distance_mm']:.0f}mm"
+
+                            # Add object ID for debugging multiple objects of same class
+                            if 'object_id' in matching_obj:
+                                label_text += f" #{matching_obj['object_id']}"
+
+                    # Draw label
+                    cv2.putText(cv_image, label_text,
+                              (detection['x1'], detection['y1'] - 10),
+                              cv2.FONT_HERSHEY_SIMPLEX, 0.4, color, 1)
+
+                    # Draw center point for selected target
+                    if (detected_object_class == self.target_object and
+                        selected_target_info and
+                        detection == selected_target_info):
+                        center_x = (detection['x1'] + detection['x2']) // 2
+                        center_y = (detection['y1'] + detection['y2']) // 2
+                        cv2.circle(cv_image, (center_x, center_y), 5, color, -1)
 
         cv2.imshow('TextToTurtlebot Camera', cv_image)
         cv2.waitKey(1)

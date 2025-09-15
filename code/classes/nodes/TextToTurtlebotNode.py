@@ -15,6 +15,8 @@ from classes.sensors.IRHandler import IRHandler
 from classes.sensors.LIDARHandler import LIDARHandler
 from classes.topics.TFSubscriber import TFSubscriber
 from classes.utils.TwistWrapper import TwistWrapper
+from classes.services.MapService import MapService
+from classes.services.VisualizationService import VisualizationService
 
 class TextToTurtlebotNode(Node):
     def __init__(self, namespace: str = '', use_turtlebot_sim: bool = False):
@@ -49,6 +51,33 @@ class TextToTurtlebotNode(Node):
         # Share TF buffer with depth camera handler for world coordinate transformations
         self.depth_camera_handler.set_tf_buffer(self.tf_subscriber.tf_buffer)
 
+        # Share TF buffer with LIDAR handler for coordinate transformations
+        self.lidar_handler.set_tf_buffer(self.tf_subscriber.tf_buffer)
+
+        # Initialize map service for persistent object tracking
+        self.map_service = MapService()
+
+        # Initialize visualization service
+        self.visualization_service = VisualizationService(
+            map_service=self.map_service,
+            tf_subscriber=self.tf_subscriber,
+            state_machine=self.state_machine,
+            window_size=(1000, 800),
+            world_bounds=(-5.0, -5.0, 5.0, 5.0)
+        )
+
+        # Set callback for coordinate updates from depth handler
+        self.depth_camera_handler.set_coordinate_callback(self.map_service.update_world_object_map)
+
+        # Set callback for LIDAR scan updates
+        self.lidar_handler.set_scan_callback(self.visualization_service.update_lidar_data)
+
+        # Add callback to share map updates with camera handler
+        self.map_service.add_coordinate_update_callback(self._on_map_updated)
+
+        # Create timer for map visualization updates (20 Hz)
+        self.map_update_timer = self.create_timer(0.05, self._update_visualization_timer)
+
         # Register Sensor Handlers
         self.camera_subscription = self.create_subscription(
             Image,
@@ -80,6 +109,24 @@ class TextToTurtlebotNode(Node):
 
         # TODO: Add subscriptions for IR and Bumper
 
+    def _on_map_updated(self, world_object_map):
+        """Callback when map service updates the world object map"""
+        # Share the updated world coordinates with the camera handler for display
+        self.camera_handler.set_world_coordinates(world_object_map)
+
+    def _update_visualization_timer(self):
+        """Timer callback to update map visualization"""
+        self.visualization_service.update_map_visualization(self.get_clock())
+
+    # Delegation methods for backward compatibility
+    def get_world_object_map(self):
+        """Get the current world object map"""
+        return self.map_service.get_world_object_map()
+
+    def get_objects_by_type(self, object_type):
+        """Get all objects of a specific type with their world coordinates"""
+        return self.map_service.get_objects_by_type(object_type)
+
     def find_target(self, target: str):
         self.state_machine.push_state(
             TurtleBotState.EXPLORE,
@@ -107,3 +154,8 @@ class TextToTurtlebotNode(Node):
                 print('[INFO]: Idling...')
             case _:
                 print(f'[INFO]: Unknown state: {current_state.value}')
+
+    def __del__(self):
+        """Cleanup when node is destroyed"""
+        if hasattr(self, 'visualization_service'):
+            self.visualization_service.stop()

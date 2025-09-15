@@ -11,3 +11,4 @@ rclpy
 tf2-ros
 tf2-geometry-msgs
 pyrealsense2
+pygame

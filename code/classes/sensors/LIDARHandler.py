@@ -1,4 +1,8 @@
 import random
+import math
+import numpy as np
+import tf2_ros
+from geometry_msgs.msg import PointStamped
 
 from classes.controllers.StateMachine import StateMachine, TurtleBotState, TurtleBotStateSource
 
@@ -6,7 +10,143 @@ class LIDARHandler:
     def __init__(self, state_machine: StateMachine):
         self.state_machine = state_machine
 
+        # Store latest LIDAR data for visualization
+        self.latest_scan_points = []
+        self.latest_obstacle_points = []
+        self.scan_callback = None
+
+        # TF buffer for coordinate transformation
+        self.tf_buffer = None
+        self.world_frame = "map"
+
+        # Filtering parameters
+        self.min_range = 0.1  # Minimum valid range (m)
+        self.max_range = 12.0  # Maximum range to consider (m)
+
+        # Debug flag
+        self._debug_printed = False
+
+    def set_tf_buffer(self, tf_buffer):
+        """Set TF buffer for coordinate transformations"""
+        self.tf_buffer = tf_buffer
+
+    def set_scan_callback(self, callback):
+        """Set callback function to receive scan data updates"""
+        self.scan_callback = callback
+
+    def transform_to_world_coordinates(self, local_x, local_y, timestamp, frame_id):
+        """Transform LIDAR coordinates to world coordinates using TF"""
+        if self.tf_buffer is None:
+            return None
+
+        try:
+            # Create point in LIDAR frame
+            point_stamped = PointStamped()
+            point_stamped.header.frame_id = frame_id
+            point_stamped.header.stamp = timestamp
+            point_stamped.point.x = local_x
+            point_stamped.point.y = local_y
+            point_stamped.point.z = 0.0
+
+            # Transform to world frame - try with exact timestamp first
+            world_point = self.tf_buffer.transform(point_stamped, self.world_frame)
+            return (world_point.point.x, world_point.point.y)
+
+        except Exception as e:
+            # If exact timestamp fails, try with latest available transform
+            try:
+                point_stamped = PointStamped()
+                point_stamped.header.frame_id = frame_id
+                point_stamped.header.stamp = self.tf_buffer.get_latest_common_time(frame_id, self.world_frame)
+                point_stamped.point.x = local_x
+                point_stamped.point.y = local_y
+                point_stamped.point.z = 0.0
+
+                world_point = self.tf_buffer.transform(point_stamped, self.world_frame)
+                return (world_point.point.x, world_point.point.y)
+
+            except Exception as e2:
+                return None
+
+    def process_full_scan(self, msg):
+        """Process full LIDAR scan and convert to world coordinates"""
+        scan_points = []
+        obstacle_points = []
+
+        angle_min = msg.angle_min
+        angle_increment = msg.angle_increment
+        timestamp = msg.header.stamp
+        frame_id = msg.header.frame_id
+
+        # Debug info (first scan only)
+        if not self._debug_printed:
+            print(f"[LIDAR] Processing scan: {len(msg.ranges)} points")
+            print(f"[LIDAR] Angle range: {angle_min:.3f} to {angle_min + angle_increment * len(msg.ranges):.3f} rad")
+            print(f"[LIDAR] Angle range (deg): {math.degrees(angle_min):.1f} to {math.degrees(angle_min + angle_increment * len(msg.ranges)):.1f}")
+            print(f"[LIDAR] Frame: {frame_id}")
+            self._debug_printed = True
+
+        # Process ALL range measurements for full 360° coverage
+        total_valid_ranges = 0
+        successful_transforms = 0
+
+        for i in range(len(msg.ranges)):
+            range_val = msg.ranges[i]
+
+            # Skip invalid measurements
+            if (range_val < self.min_range or
+                range_val > self.max_range or
+                math.isinf(range_val) or
+                math.isnan(range_val)):
+                continue
+
+            total_valid_ranges += 1
+
+            # Calculate angle for this measurement
+            angle = angle_min + i * angle_increment
+
+            # Convert to Cartesian coordinates in LIDAR frame
+            # Standard ROS LIDAR convention: X forward, Y left, angle 0 = forward (X-axis)
+            local_x = range_val * math.cos(angle)
+            local_y = range_val * math.sin(angle)
+
+            # Transform to world coordinates using the actual frame from message
+            world_coords = self.transform_to_world_coordinates(local_x, local_y, timestamp, frame_id)
+
+            if world_coords:
+                successful_transforms += 1
+                scan_points.append(world_coords)
+
+                # Points closer than threshold are considered obstacles for visualization
+                if range_val < 4.0:  # Within 4m are considered obstacles for visualization
+                    obstacle_points.append(world_coords)
+
+        # Transform success tracking (silent)
+
+        # Store the processed data
+        self.latest_scan_points = scan_points
+        self.latest_obstacle_points = obstacle_points
+
+        # Notify callback if set
+        if self.scan_callback:
+            self.scan_callback({
+                'scan_points': scan_points,
+                'obstacle_points': obstacle_points,
+                'timestamp': timestamp
+            })
+
+    def get_latest_scan_data(self):
+        """Get the latest processed scan data"""
+        return {
+            'scan_points': self.latest_scan_points,
+            'obstacle_points': self.latest_obstacle_points
+        }
+
     def handle(self, msg):
+        # Process full scan for visualization
+        self.process_full_scan(msg)
+
+        # Original obstacle avoidance logic
         angle_min = msg.angle_min
         angle_increment = msg.angle_increment
 
@@ -15,11 +155,16 @@ class LIDARHandler:
         index_start = max(0, index_front - 50)
         index_end = min(len(msg.ranges) - 1, index_front + 50)
         front_ranges = msg.ranges[index_start:index_end + 1]
-        front_distance = min([x for x in front_ranges if x != float('inf')])
 
-        if front_distance < 0.5:
-            print("[LIDAR]: Detected obstacle closer than 0.5m")
-            direction = 1
-            self.state_machine.push_state(TurtleBotState.AVOID_OBSTACLE, TurtleBotStateSource.LIDAR, data={"direction": direction})
-        else:
-            self.state_machine.pop_state(TurtleBotState.AVOID_OBSTACLE, TurtleBotStateSource.LIDAR)
+        # Filter out invalid values
+        valid_front_ranges = [x for x in front_ranges if not (math.isinf(x) or math.isnan(x))]
+
+        if valid_front_ranges:
+            front_distance = min(valid_front_ranges)
+
+            if front_distance < 0.5:
+                print(f"[LIDAR]: Detected obstacle at {front_distance:.2f}m")
+                direction = 1
+                self.state_machine.push_state(TurtleBotState.AVOID_OBSTACLE, TurtleBotStateSource.LIDAR, data={"direction": direction})
+            else:
+                self.state_machine.pop_state(TurtleBotState.AVOID_OBSTACLE, TurtleBotStateSource.LIDAR)
