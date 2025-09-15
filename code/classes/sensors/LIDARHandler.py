@@ -5,15 +5,19 @@ import tf2_ros
 from geometry_msgs.msg import PointStamped
 
 from classes.controllers.StateMachine import StateMachine, TurtleBotState, TurtleBotStateSource
+from classes.events import EventQueue, EventType, Event
 
 class LIDARHandler:
-    def __init__(self, state_machine: StateMachine):
+    def __init__(self, state_machine: StateMachine, visualization_service=None):
         self.state_machine = state_machine
+        self.visualization_service = visualization_service
 
         # Store latest LIDAR data for visualization
         self.latest_scan_points = []
         self.latest_obstacle_points = []
-        self.scan_callback = None
+
+        # Event queue for decoupled communication
+        self.event_queue = EventQueue()
 
         # TF buffer for coordinate transformation
         self.tf_buffer = None
@@ -21,18 +25,15 @@ class LIDARHandler:
 
         # Filtering parameters
         self.min_range = 0.1  # Minimum valid range (m)
-        self.max_range = 12.0  # Maximum range to consider (m)
+        self.max_range = 15  # Maximum range to consider (m)
 
-        # Debug flag
-        self._debug_printed = False
+        # Track obstacle state for event publishing
+        self._obstacle_detected = False
 
     def set_tf_buffer(self, tf_buffer):
         """Set TF buffer for coordinate transformations"""
         self.tf_buffer = tf_buffer
 
-    def set_scan_callback(self, callback):
-        """Set callback function to receive scan data updates"""
-        self.scan_callback = callback
 
     def transform_to_world_coordinates(self, local_x, local_y, timestamp, frame_id):
         """Transform LIDAR coordinates to world coordinates using TF"""
@@ -78,14 +79,6 @@ class LIDARHandler:
         timestamp = msg.header.stamp
         frame_id = msg.header.frame_id
 
-        # Debug info (first scan only)
-        if not self._debug_printed:
-            print(f"[LIDAR] Processing scan: {len(msg.ranges)} points")
-            print(f"[LIDAR] Angle range: {angle_min:.3f} to {angle_min + angle_increment * len(msg.ranges):.3f} rad")
-            print(f"[LIDAR] Angle range (deg): {math.degrees(angle_min):.1f} to {math.degrees(angle_min + angle_increment * len(msg.ranges)):.1f}")
-            print(f"[LIDAR] Frame: {frame_id}")
-            self._debug_printed = True
-
         # Process ALL range measurements for full 360° coverage
         total_valid_ranges = 0
         successful_transforms = 0
@@ -127,13 +120,27 @@ class LIDARHandler:
         self.latest_scan_points = scan_points
         self.latest_obstacle_points = obstacle_points
 
-        # Notify callback if set
-        if self.scan_callback:
-            self.scan_callback({
+        # Update visualization service if available
+        if self.visualization_service:
+            scan_data = {
                 'scan_points': scan_points,
                 'obstacle_points': obstacle_points,
                 'timestamp': timestamp
-            })
+            }
+            self.visualization_service.update_lidar_data(scan_data)
+
+        # Publish LIDAR scan processed event
+        self.event_queue.publish_event(
+            EventType.LIDAR_SCAN_PROCESSED,
+            source="LidarHandler",
+            data={
+                'scan_points': scan_points,
+                'obstacle_points': obstacle_points,
+                'timestamp': timestamp,
+                'total_points': total_valid_ranges,
+                'successful_transforms': successful_transforms
+            }
+        )
 
     def get_latest_scan_data(self):
         """Get the latest processed scan data"""
@@ -163,8 +170,32 @@ class LIDARHandler:
             front_distance = min(valid_front_ranges)
 
             if front_distance < 0.5:
-                print(f"[LIDAR]: Detected obstacle at {front_distance:.2f}m")
-                direction = 1
-                self.state_machine.push_state(TurtleBotState.AVOID_OBSTACLE, TurtleBotStateSource.LIDAR, data={"direction": direction})
+                if not self._obstacle_detected:
+                    print(f"[LIDAR]: Detected obstacle at {front_distance:.2f}m")
+                    direction = 1
+                    self.state_machine.push_state(TurtleBotState.AVOID_OBSTACLE, TurtleBotStateSource.LIDAR, data={"direction": direction})
+
+                    # Publish obstacle detected event
+                    self.event_queue.publish_event(
+                        EventType.OBSTACLE_DETECTED,
+                        source="LidarHandler",
+                        data={
+                            'distance': front_distance,
+                            'direction': direction,
+                            'sensor_type': 'lidar'
+                        }
+                    )
+                    self._obstacle_detected = True
             else:
-                self.state_machine.pop_state(TurtleBotState.AVOID_OBSTACLE, TurtleBotStateSource.LIDAR)
+                if self._obstacle_detected:
+                    self.state_machine.pop_state(TurtleBotState.AVOID_OBSTACLE, TurtleBotStateSource.LIDAR)
+
+                    # Publish obstacle cleared event
+                    self.event_queue.publish_event(
+                        EventType.OBSTACLE_CLEARED,
+                        source="LidarHandler",
+                        data={
+                            'sensor_type': 'lidar'
+                        }
+                    )
+                    self._obstacle_detected = False

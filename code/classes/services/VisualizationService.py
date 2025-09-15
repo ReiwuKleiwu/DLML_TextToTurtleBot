@@ -1,4 +1,5 @@
 from classes.visualization.InteractiveMapVisualizer import InteractiveMapVisualizer
+from classes.events import EventQueue, EventType, Event
 
 class VisualizationService:
     """Service to manage map visualization and coordinate updates between components"""
@@ -11,6 +12,9 @@ class VisualizationService:
         # Store latest LIDAR scan data (real-time only)
         self.latest_lidar_data = {}
 
+        # Event queue for decoupled communication
+        self.event_queue = EventQueue()
+
         # Initialize interactive map visualizer
         self.map_visualizer = InteractiveMapVisualizer(
             window_size=window_size,
@@ -22,6 +26,11 @@ class VisualizationService:
 
         # Connect the clear map callback
         self.map_visualizer.set_clear_map_callback(self.map_service.clear_persistent_map)
+
+        # Subscribe to events that require visualization updates
+        self.event_queue.subscribe(EventType.SENSOR_DATA_UPDATED, self._on_map_data_updated)
+        self.event_queue.subscribe(EventType.STATE_CHANGED, self._on_state_changed)
+        self.event_queue.subscribe(EventType.LIDAR_SCAN_PROCESSED, self._on_lidar_scan_updated)
 
     def update_lidar_data(self, lidar_scan_data):
         """Update LIDAR scan data for real-time visualization"""
@@ -81,6 +90,23 @@ class VisualizationService:
                 additional_info=additional_info,
                 lidar_data=self.latest_lidar_data
             )
+
+    def _on_map_data_updated(self, event: Event):
+        """Handle map data update events"""
+        # Use a dummy clock since the visualization update doesn't need real time
+        from rclpy.clock import Clock
+        self.update_map_visualization(Clock())
+
+    def _on_state_changed(self, event: Event):
+        """Handle state change events"""
+        from rclpy.clock import Clock
+        self.update_map_visualization(Clock())
+
+    def _on_lidar_scan_updated(self, event: Event):
+        """Handle LIDAR scan update events"""
+        # This is handled by the LidarHandler directly calling update_lidar_data
+        # so we don't need to do anything here
+        pass
 
     def is_running(self):
         """Check if the map visualizer is running"""

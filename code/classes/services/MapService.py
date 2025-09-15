@@ -1,4 +1,5 @@
 import time
+from classes.events import EventQueue, EventType, Event
 
 class MapService:
     """Service to manage persistent world object mapping and tracking"""
@@ -11,17 +12,9 @@ class MapService:
         self.object_update_distance_threshold = 0.5  # Objects within 50cm are considered the same
         self.object_confidence_threshold = 5  # Object must be seen 5 times to be added to persistent map
 
-        # Callbacks
-        self.coordinate_update_callbacks = []
+        # Event queue for decoupled communication
+        self.event_queue = EventQueue()
 
-    def add_coordinate_update_callback(self, callback):
-        """Add a callback to be notified when coordinates are updated"""
-        self.coordinate_update_callbacks.append(callback)
-
-    def remove_coordinate_update_callback(self, callback):
-        """Remove a coordinate update callback"""
-        if callback in self.coordinate_update_callbacks:
-            self.coordinate_update_callbacks.remove(callback)
 
     def update_world_object_map(self, new_object_coordinates):
         """Update the persistent world object map with new coordinate data"""
@@ -90,9 +83,17 @@ class MapService:
                     }
                     self.world_object_map[object_class].append(persistent_obj)
 
-        # Notify all callbacks about the update
-        for callback in self.coordinate_update_callbacks:
-            callback(self.world_object_map)
+        # Publish map update event
+        self.event_queue.publish_event(
+            EventType.SENSOR_DATA_UPDATED,
+            source="MapService",
+            data={
+                'map_updated': True,
+                'world_object_map': self.world_object_map,
+                'object_count': sum(len(objects) for objects in self.world_object_map.values()),
+                'object_types': list(self.world_object_map.keys())
+            }
+        )
 
     def get_world_object_map(self):
         """Get the current world object map"""
@@ -106,9 +107,15 @@ class MapService:
         """Clear all persistent map data (objects only)"""
         self.world_object_map = {}
 
-        # Notify callbacks about the clear
-        for callback in self.coordinate_update_callbacks:
-            callback(self.world_object_map)
+        # Publish map cleared event
+        self.event_queue.publish_event(
+            EventType.SENSOR_DATA_UPDATED,
+            source="MapService",
+            data={
+                'map_cleared': True,
+                'world_object_map': self.world_object_map
+            }
+        )
 
     def get_map_statistics(self):
         """Get statistics about the persistent map"""

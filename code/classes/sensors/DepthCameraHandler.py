@@ -10,11 +10,13 @@ from geometry_msgs.msg import PointStamped
 import rclpy
 
 from classes.controllers.StateMachine import StateMachine, TurtleBotState, TurtleBotStateSource
+from classes.events import EventQueue, EventType, Event
 
 class DepthCameraHandler:
-    def __init__(self, bridge: CvBridge, state_machine: StateMachine):
+    def __init__(self, bridge: CvBridge, state_machine: StateMachine, map_service=None):
         self.bridge = bridge
         self.state_machine = state_machine
+        self.map_service = map_service
 
         self.target_close_counter = 0
         self.required_frames = 5
@@ -23,7 +25,7 @@ class DepthCameraHandler:
         # Camera intrinsics for 3D coordinate calculation
         self.intrinsics = None
 
-        # Shared detection data from CameraHandler
+        # Shared detection data from CameraHandler (via events)
         self.shared_detections = None
 
         # For error logging (will be set if available)
@@ -36,7 +38,12 @@ class DepthCameraHandler:
 
         # Store latest calculated coordinates
         self.latest_object_coordinates = {}
-        self.coordinate_callback = None
+
+        # Event queue for decoupled communication
+        self.event_queue = EventQueue()
+
+        # Subscribe to object detection events from CameraHandler
+        self.event_queue.subscribe(EventType.OBJECT_DETECTED, self._on_object_detected)
 
     def handle(self, msg):
         # Store message timestamp for TF transformations
@@ -90,9 +97,14 @@ class DepthCameraHandler:
             self.intrinsics.model = rs2.distortion.kannala_brandt4
         self.intrinsics.coeffs = [i for i in camera_info.d]
 
-    def set_shared_detections(self, detections_data):
-        """Set detection data from CameraHandler"""
-        self.shared_detections = detections_data
+    def _on_object_detected(self, event: Event):
+        """Handle object detection events from CameraHandler"""
+        data = event.data
+        self.shared_detections = (
+            data.get('all_detections'),
+            data.get('target_object'),
+            data.get('selected_target_info')
+        )
 
     def set_logger(self, logger):
         """Set logger instance for error reporting"""
@@ -102,9 +114,6 @@ class DepthCameraHandler:
         """Set TF buffer for coordinate transformations"""
         self.tf_buffer = tf_buffer
 
-    def set_coordinate_callback(self, callback):
-        """Set callback function to receive coordinate updates"""
-        self.coordinate_callback = callback
 
     def get_latest_coordinates(self):
         """Get the latest calculated object coordinates"""
@@ -227,13 +236,20 @@ class DepthCameraHandler:
                         'bbox_hash': hash((detection['x1'], detection['y1'], detection['x2'], detection['y2']))  # Hash for matching
                     }
 
-                    print(object_info)
-
                     object_coordinates[detected_object_class].append(object_info)
 
-        # Store coordinates in the handler (will be accessed by main node)
+        # Store coordinates in the handler
         self.latest_object_coordinates = object_coordinates
 
-        # Notify callback if set
-        if self.coordinate_callback:
-            self.coordinate_callback(object_coordinates)
+        # Update map service if available
+        if self.map_service:
+            self.map_service.update_world_object_map(object_coordinates)
+
+        # Publish world coordinates via event queue
+        self.event_queue.publish_event(
+            EventType.WORLD_COORDINATES_CALCULATED,
+            source="DepthCameraHandler",
+            data={
+                'world_coordinates': object_coordinates
+            }
+        )

@@ -4,9 +4,10 @@ from cv_bridge import CvBridge
 from classes.controllers.StateMachine import StateMachine, TurtleBotState, TurtleBotStateSource
 from classes.perception.ObjectDetector import ObjectDetector
 from classes.utils.TargetSelector import TargetSelector
+from classes.events import EventQueue, EventType, Event
 
 class CameraHandler:
-    def __init__(self, bridge: CvBridge, state_machine: StateMachine, depth_camera_handler=None):
+    def __init__(self, bridge: CvBridge, state_machine: StateMachine):
         self.target_object = None
         self.bridge = bridge
         self.state_machine = state_machine
@@ -16,12 +17,15 @@ class CameraHandler:
         self.target_close_counter = 0
         self.required_frames = 5
         self.target_area_threshold = 0.30
-        
-        # Reference to depth camera handler for sharing detection data
-        self.depth_camera_handler = depth_camera_handler
 
-        # Store world coordinates from depth handler
+        # Event queue for decoupled communication
+        self.event_queue = EventQueue()
+
+        # Store world coordinates from depth handler events
         self.world_coordinates = {}
+
+        # Subscribe to world coordinates events
+        self.event_queue.subscribe(EventType.WORLD_COORDINATES_CALCULATED, self._on_world_coordinates_updated)
 
 
     def is_target_close(self, target_info, camera_width, camera_height):
@@ -41,9 +45,9 @@ class CameraHandler:
             self.target_object = target_object
             self.target_selector.reset()
 
-    def set_world_coordinates(self, world_coordinates):
-        """Set world coordinates from depth handler"""
-        self.world_coordinates = world_coordinates
+    def _on_world_coordinates_updated(self, event: Event):
+        """Handle world coordinates update events from depth handler"""
+        self.world_coordinates = event.data.get('world_coordinates', {})
 
     def handle(self, msg):
         self.get_target_object()
@@ -62,9 +66,18 @@ class CameraHandler:
                 all_detections[self.target_object]
             )
         
-        # Share detection data with depth camera handler (after target selection)
-        if self.depth_camera_handler:
-            self.depth_camera_handler.set_shared_detections((all_detections, self.target_object, selected_target_info))
+        # Publish detection data via event queue for depth camera handler to consume
+        self.event_queue.publish_event(
+            EventType.OBJECT_DETECTED,
+            source="CameraHandler",
+            data={
+                'all_detections': all_detections,
+                'target_object': self.target_object,
+                'selected_target_info': selected_target_info,
+                'camera_width': camera_width,
+                'camera_height': camera_height
+            }
+        )
 
         # Draw all detected objects with world coordinates
         for detected_object_class in detected_objects:
