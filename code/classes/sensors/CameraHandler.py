@@ -6,7 +6,7 @@ from classes.perception.ObjectDetector import ObjectDetector
 from classes.utils.TargetSelector import TargetSelector
 
 class CameraHandler:
-    def __init__(self, bridge: CvBridge, state_machine: StateMachine):
+    def __init__(self, bridge: CvBridge, state_machine: StateMachine, depth_camera_handler=None):
         self.target_object = None
         self.bridge = bridge
         self.state_machine = state_machine
@@ -16,6 +16,9 @@ class CameraHandler:
         self.target_close_counter = 0
         self.required_frames = 5
         self.target_area_threshold = 0.30
+        
+        # Reference to depth camera handler for sharing detection data
+        self.depth_camera_handler = depth_camera_handler
 
 
     def is_target_close(self, target_info, camera_width, camera_height):
@@ -51,6 +54,10 @@ class CameraHandler:
                 self.target_object, 
                 all_detections[self.target_object]
             )
+        
+        # Share detection data with depth camera handler (after target selection)
+        if self.depth_camera_handler:
+            self.depth_camera_handler.set_shared_detections((all_detections, self.target_object, selected_target_info))
 
         # Draw all detected objects
         for detected_object_class in detected_objects:
