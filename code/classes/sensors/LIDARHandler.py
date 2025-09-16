@@ -8,9 +8,8 @@ from classes.controllers.StateMachine import StateMachine, TurtleBotState, Turtl
 from classes.events import EventQueue, EventType, Event
 
 class LIDARHandler:
-    def __init__(self, state_machine: StateMachine, visualization_service=None):
+    def __init__(self, state_machine: StateMachine):
         self.state_machine = state_machine
-        self.visualization_service = visualization_service
 
         # Store latest LIDAR data for visualization
         self.latest_scan_points = []
@@ -120,14 +119,6 @@ class LIDARHandler:
         self.latest_scan_points = scan_points
         self.latest_obstacle_points = obstacle_points
 
-        # Update visualization service if available
-        if self.visualization_service:
-            scan_data = {
-                'scan_points': scan_points,
-                'obstacle_points': obstacle_points,
-                'timestamp': timestamp
-            }
-            self.visualization_service.update_lidar_data(scan_data)
 
         # Publish LIDAR scan processed event
         self.event_queue.publish_event(

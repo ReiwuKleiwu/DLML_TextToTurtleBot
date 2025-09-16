@@ -1,19 +1,21 @@
 from classes.visualization.InteractiveMapVisualizer import InteractiveMapVisualizer
 from classes.events import EventQueue, EventType, Event
 
+
 class VisualizationService:
-    """Service to manage map visualization and coordinate updates between components"""
+    """Event-driven visualization service that reacts to map and sensor events"""
 
-    def __init__(self, map_service, tf_subscriber, state_machine, window_size=(1000, 800), world_bounds=(-5.0, -5.0, 5.0, 5.0)):
-        self.map_service = map_service
-        self.tf_subscriber = tf_subscriber
-        self.state_machine = state_machine
-
-        # Store latest LIDAR scan data (real-time only)
-        self.latest_lidar_data = {}
-
+    def __init__(self, window_size=(1000, 800), world_bounds=(-5.0, -5.0, 5.0, 5.0)):
         # Event queue for decoupled communication
         self.event_queue = EventQueue()
+
+        # Data storage for visualization
+        self.persistent_objects_map = {}
+        self.lidar_scan_data = {}
+        self.robot_position = None
+        self.robot_orientation = None
+        self.current_target_object = None
+        self.robot_state = "UNKNOWN"
 
         # Initialize interactive map visualizer
         self.map_visualizer = InteractiveMapVisualizer(
@@ -24,89 +26,105 @@ class VisualizationService:
         # Start the visualization in a separate thread
         self.map_visualizer.start()
 
-        # Connect the clear map callback
-        self.map_visualizer.set_clear_map_callback(self.map_service.clear_persistent_map)
-
-        # Subscribe to events that require visualization updates
-        self.event_queue.subscribe(EventType.SENSOR_DATA_UPDATED, self._on_map_data_updated)
+        # Subscribe to all relevant events
+        self.event_queue.subscribe(EventType.SENSOR_DATA_UPDATED, self._on_map_updated)
+        self.event_queue.subscribe(EventType.LIDAR_SCAN_PROCESSED, self._on_lidar_updated)
         self.event_queue.subscribe(EventType.STATE_CHANGED, self._on_state_changed)
-        self.event_queue.subscribe(EventType.LIDAR_SCAN_PROCESSED, self._on_lidar_scan_updated)
 
-    def update_lidar_data(self, lidar_scan_data):
-        """Update LIDAR scan data for real-time visualization"""
-        # Use real-time LIDAR data only (no accumulation)
-        self.latest_lidar_data = lidar_scan_data
+    def _on_map_updated(self, event: Event):
+        """Handle map service updates with persistent object data"""
+        if event.source == "MapService":
+            self.persistent_objects_map = event.data.get('persistent_objects_map', {})
+            self._update_visualization()
 
-    def get_map_statistics(self):
-        """Get statistics about the persistent map"""
-        map_stats = self.map_service.get_map_statistics()
-        current_lidar_points = len(self.latest_lidar_data.get('scan_points', []))
-
-        return {
-            'total_objects': map_stats['total_objects'],
-            'object_types': map_stats['object_types'],
-            'lidar_points': current_lidar_points
+    def _on_lidar_updated(self, event: Event):
+        """Handle LIDAR scan updates"""
+        self.lidar_scan_data = {
+            'scan_points': event.data.get('scan_points', []),
+            'obstacle_points': event.data.get('obstacle_points', []),
+            'timestamp': event.data.get('timestamp')
         }
+        self._update_visualization()
 
-    def update_map_visualization(self, clock):
-        """Update the map visualization with current robot state and object positions"""
-        # Get TurtleBot position and orientation
-        turtlebot_position = self.tf_subscriber.get_position()
-        turtlebot_orientation = self.tf_subscriber.get_orientation()
+    def _on_state_changed(self, event: Event):
+        """Handle state machine changes"""
+        if event.source == "StateMachine":
+            self.robot_state = event.data.get('current_state', "UNKNOWN")
+            # Extract target object from state data if available
+            state_data = event.data.get('state_data', {})
+            if state_data and 'target_object' in state_data:
+                self.current_target_object = state_data['target_object']
+            self._update_visualization()
 
-        # Get current target object
-        current_state = self.state_machine.get_current_state()
-        target_object_class = None
-        robot_state = "UNKNOWN"
+    def _update_visualization(self):
+        """Update the map visualization with current data"""
+        if not self.map_visualizer.is_running():
+            return
 
-        if current_state:
-            robot_state = current_state.value.name
-            if hasattr(current_state, 'data') and current_state.data:
-                target_object_class = current_state.data.get("target_object", None)
+        # Convert persistent objects to visualization format
+        world_object_map = {}
+        total_objects = 0
 
-        # Prepare additional info for display
-        world_object_map = self.map_service.get_world_object_map()
+        for object_class, objects_list in self.persistent_objects_map.items():
+            world_object_map[object_class] = []
+            for obj in objects_list:
+                world_object_map[object_class].append({
+                    'world_coords': obj.get('world_coords'),
+                    'detection_count': obj.get('detection_count', 0),
+                    'last_seen': obj.get('last_seen', 0),
+                    'first_seen': obj.get('first_seen', 0),
+                    'is_selected_target': obj.get('is_selected_target', False)  # Use the actual selected target flag
+                })
+                total_objects += 1
+
+        # Prepare statistics
         object_counts = {}
         for obj_class, obj_list in world_object_map.items():
             object_counts[obj_class] = len(obj_list)
 
-        map_stats = self.get_map_statistics()
-
         additional_info = {
             'object_count': object_counts,
-            'robot_state': robot_state,
-            'target_object': target_object_class,
-            'timestamp': clock.now().to_msg().sec,
-            'map_stats': map_stats
+            'robot_state': self.robot_state,
+            'target_object': self.current_target_object,
+            'total_objects': total_objects,
+            'lidar_points': len(self.lidar_scan_data.get('scan_points', []))
         }
 
-        # Update the map data (thread-safe)
-        if self.map_visualizer.is_running():
-            self.map_visualizer.update_data(
-                turtlebot_position=turtlebot_position,
-                turtlebot_orientation=turtlebot_orientation,
-                world_object_map=world_object_map,
-                target_object_class=target_object_class,
-                additional_info=additional_info,
-                lidar_data=self.latest_lidar_data
-            )
+        # Update the visualization
+        self.map_visualizer.update_visualization_data(
+            robot_position=self.robot_position,
+            robot_orientation=self.robot_orientation,
+            world_object_map=world_object_map,
+            target_object_class=self.current_target_object,
+            lidar_scan_data=self.lidar_scan_data,
+            additional_info=additional_info
+        )
 
-    def _on_map_data_updated(self, event: Event):
-        """Handle map data update events"""
-        # Use a dummy clock since the visualization update doesn't need real time
-        from rclpy.clock import Clock
-        self.update_map_visualization(Clock())
+    def set_robot_transform_data(self, position, orientation):
+        """Set robot position and orientation (called by TF subscriber)"""
+        self.robot_position = position
+        self.robot_orientation = orientation
 
-    def _on_state_changed(self, event: Event):
-        """Handle state change events"""
-        from rclpy.clock import Clock
-        self.update_map_visualization(Clock())
+        # Publish robot transform event for other services (like MapService)
+        self.event_queue.publish_event(
+            EventType.ROBOT_TRANSFORM_UPDATED,
+            source="VisualizationService",
+            data={
+                'position': position,
+                'orientation': orientation
+            }
+        )
 
-    def _on_lidar_scan_updated(self, event: Event):
-        """Handle LIDAR scan update events"""
-        # This is handled by the LidarHandler directly calling update_lidar_data
-        # so we don't need to do anything here
-        pass
+        self._update_visualization()
+
+    def clear_map(self):
+        """Clear the persistent map (callback for visualizer clear button)"""
+        # Publish event to clear the map
+        self.event_queue.publish_event(
+            EventType.SENSOR_DATA_UPDATED,
+            source="VisualizationService",
+            data={'clear_map_request': True}
+        )
 
     def is_running(self):
         """Check if the map visualizer is running"""

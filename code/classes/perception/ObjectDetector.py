@@ -31,19 +31,24 @@ class ObjectDetector:
         detected = set()
         info = {}
         all_detections = {}  # Store all detections for each class
-        
+
         for i, box in enumerate(boxes):
             cls_id = int(boxes.cls[i])
             name = results[0].names[cls_id]
+
+            # Skip wall detections
+            if name.lower() == 'wall':
+                continue
+
             coords = box.xyxy[0]  # [x1, y1, x2, y2]
             x1, y1, x2, y2 = map(int, coords)
             detected.add(name)
-            
+
             # Store all detections for each class
             if name not in all_detections:
                 all_detections[name] = []
             all_detections[name].append({'x1': x1, 'y1': y1, 'x2': x2, 'y2': y2})
-            
+
             # Keep the last detection for backward compatibility (will be updated by CameraHandler)
             info[name] = {'x1': x1, 'y1': y1, 'x2': x2, 'y2': y2}
 

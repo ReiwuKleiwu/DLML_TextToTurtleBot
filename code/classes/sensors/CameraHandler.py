@@ -21,11 +21,11 @@ class CameraHandler:
         # Event queue for decoupled communication
         self.event_queue = EventQueue()
 
-        # Store world coordinates from depth handler events
-        self.world_coordinates = {}
+        # Store persistent object data from map service
+        self.persistent_objects_map = {}
 
-        # Subscribe to world coordinates events
-        self.event_queue.subscribe(EventType.WORLD_COORDINATES_CALCULATED, self._on_world_coordinates_updated)
+        # Subscribe to map service events for persistent object data
+        self.event_queue.subscribe(EventType.SENSOR_DATA_UPDATED, self._on_map_updated)
 
 
     def is_target_close(self, target_info, camera_width, camera_height):
@@ -45,9 +45,9 @@ class CameraHandler:
             self.target_object = target_object
             self.target_selector.reset()
 
-    def _on_world_coordinates_updated(self, event: Event):
-        """Handle world coordinates update events from depth handler"""
-        self.world_coordinates = event.data.get('world_coordinates', {})
+    def _on_map_updated(self, event: Event):
+        """Handle map service update events with persistent object data"""
+        self.persistent_objects_map = event.data.get('persistent_objects_map', {})
 
     def handle(self, msg):
         self.get_target_object()
@@ -62,10 +62,15 @@ class CameraHandler:
         selected_target_info = None
         if self.target_object and self.target_object in all_detections:
             selected_target_info = self.target_selector.select_target(
-                self.target_object, 
+                self.target_object,
                 all_detections[self.target_object]
             )
-        
+
+        # Get tracking ID for the selected target
+        selected_target_tracking_id = None
+        if selected_target_info:
+            selected_target_tracking_id = self.target_selector.get_current_tracking_id()
+
         # Publish detection data via event queue for depth camera handler to consume
         self.event_queue.publish_event(
             EventType.OBJECT_DETECTED,
@@ -74,6 +79,7 @@ class CameraHandler:
                 'all_detections': all_detections,
                 'target_object': self.target_object,
                 'selected_target_info': selected_target_info,
+                'selected_target_tracking_id': selected_target_tracking_id,
                 'camera_width': camera_width,
                 'camera_height': camera_height
             }
@@ -99,34 +105,26 @@ class CameraHandler:
                     # Create label with class name and world coordinates
                     label_text = detected_object_class
 
-                    # Add world coordinates if available - match by bounding box coordinates
-                    if detected_object_class in self.world_coordinates:
-                        # Find matching object by comparing bounding box hash
-                        matching_obj = None
-                        detection_hash = hash((detection['x1'], detection['y1'], detection['x2'], detection['y2']))
+                    # Add world coordinates and tracking info from map service
+                    if detected_object_class in self.persistent_objects_map:
+                        persistent_objects = self.persistent_objects_map[detected_object_class]
 
-                        for obj_info in self.world_coordinates[detected_object_class]:
-                            if 'bbox_hash' in obj_info and obj_info['bbox_hash'] == detection_hash:
-                                matching_obj = obj_info
-                                break
-                            # Fallback to coordinate comparison for backwards compatibility
-                            elif (obj_info['detection']['x1'] == detection['x1'] and
-                                  obj_info['detection']['y1'] == detection['y1'] and
-                                  obj_info['detection']['x2'] == detection['x2'] and
-                                  obj_info['detection']['y2'] == detection['y2']):
-                                matching_obj = obj_info
-                                break
+                        # Find the closest persistent object to current detection center
+                        detection_center_x = (detection['x1'] + detection['x2']) // 2
+                        detection_center_y = (detection['y1'] + detection['y2']) // 2
 
-                        if matching_obj:
-                            if matching_obj['world_coords']:
-                                wx, wy, wz = matching_obj['world_coords']
-                                label_text += f" W:({wx:.2f}, {wy:.2f}, {wz:.2f}m)"
-                            elif matching_obj['distance_mm']:
-                                label_text += f" {matching_obj['distance_mm']:.0f}mm"
+                        if persistent_objects:
+                            # Use the most recently seen object for better matching
+                            most_recent_obj = max(persistent_objects, key=lambda obj: obj.get('last_seen', 0))
 
-                            # Add object ID for debugging multiple objects of same class
-                            if 'object_id' in matching_obj:
-                                label_text += f" #{matching_obj['object_id']}"
+                            if 'world_coords' in most_recent_obj and most_recent_obj['world_coords']:
+                                wx, wy, wz = most_recent_obj['world_coords']
+                                label_text += f" World:({wx:.2f}, {wy:.2f}, {wz:.2f}m)"
+
+                                # Add tracking statistics for debugging
+                                if 'total_detections' in most_recent_obj:
+                                    detection_count = most_recent_obj['total_detections']
+                                    label_text += f" [{detection_count}x]"
 
                     # Draw label
                     cv2.putText(cv_image, label_text,

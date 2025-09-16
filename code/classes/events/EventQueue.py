@@ -37,6 +37,9 @@ class EventType(Enum):
     SENSOR_DATA_UPDATED = "sensor_data_updated"
     VISUALIZATION_UPDATE = "visualization_update"
 
+    # Robot motion events
+    ROBOT_TRANSFORM_UPDATED = "robot_transform_updated"
+
 
 @dataclass
 class Event:

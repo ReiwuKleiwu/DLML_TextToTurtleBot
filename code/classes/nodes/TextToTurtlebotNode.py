@@ -53,18 +53,18 @@ class TextToTurtlebotNode(Node):
 
         # Initialize visualization service
         self.visualization_service = VisualizationService(
-            map_service=self.map_service,
-            tf_subscriber=self.tf_subscriber,
-            state_machine=self.state_machine,
             window_size=(1000, 800),
             world_bounds=(-5.0, -5.0, 5.0, 5.0)
         )
 
+        # Connect clear map callback
+        self.visualization_service.map_visualizer.set_clear_map_callback(self.map_service.clear_map)
+
         # Initialize Sensor Handlers (after services)
-        self.depth_camera_handler = DepthCameraHandler(self.bridge, self.state_machine, self.map_service)
+        self.depth_camera_handler = DepthCameraHandler(self.bridge, self.state_machine)
         self.depth_camera_handler.set_logger(self.get_logger())
         self.camera_handler = CameraHandler(self.bridge, self.state_machine)
-        self.lidar_handler = LIDARHandler(self.state_machine, self.visualization_service)
+        self.lidar_handler = LIDARHandler(self.state_machine)
         self.ir_handler = IRHandler(self.state_machine)
 
         # Share TF buffer with handlers for coordinate transformations
@@ -102,6 +102,9 @@ class TextToTurtlebotNode(Node):
             10
         )
 
+        # Create timer for robot transform updates (10 Hz)
+        self.transform_update_timer = self.create_timer(0.1, self._update_robot_transforms)
+
         # TODO: Add subscriptions for IR and Bumper
 
 
@@ -133,6 +136,11 @@ class TextToTurtlebotNode(Node):
             case _:
                 print(f'[INFO]: Unknown state: {current_state.value}')
 
+    def _update_robot_transforms(self):
+        """Update robot position and orientation in visualization"""
+        robot_position = self.tf_subscriber.get_position()
+        robot_orientation = self.tf_subscriber.get_orientation()
+        self.visualization_service.set_robot_transform_data(robot_position, robot_orientation)
 
     def __del__(self):
         """Cleanup when node is destroyed"""

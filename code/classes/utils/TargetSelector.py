@@ -11,7 +11,7 @@ class TargetSelector:
     def __init__(self, persistence_frames: int = 10, distance_threshold: float = 50.0):
         """
         Initialize the target selector.
-        
+
         Args:
             persistence_frames: Number of frames to persist with a target before allowing switching
             distance_threshold: Maximum pixel distance for considering targets as "the same"
@@ -23,6 +23,10 @@ class TargetSelector:
         self.frames_since_selection = 0
         self.lost_target_frames = 0
         self.max_lost_frames = 5
+
+        # Tracking ID for persistent object identification
+        self.current_tracking_id = None
+        self._next_tracking_id = 1
     
     def select_target(self, target_class: str, detections: List[Dict]) -> Optional[Dict]:
         """
@@ -126,23 +130,31 @@ class TargetSelector:
         return best_match
     
     def _set_selected_target(self, target: Dict):
-        """Set the selected target and reset tracking counters."""
+        """Set the selected target and assign new tracking ID."""
         self.selected_target = target
         self.selected_target_info = target
         self.frames_since_selection = 0
         self.lost_target_frames = 0
-    
+        # Assign new tracking ID when selecting a new target
+        self.current_tracking_id = self._next_tracking_id
+        self._next_tracking_id += 1
+
     def _clear_selection(self):
         """Clear the currently selected target."""
         self.selected_target = None
         self.selected_target_info = None
         self.frames_since_selection = 0
         self.lost_target_frames = 0
-    
+        self.current_tracking_id = None
+
     def reset(self):
         """Reset the target selector to initial state."""
         self._clear_selection()
-    
+
     def get_selected_target_info(self) -> Optional[Dict]:
         """Get information about the currently selected target."""
         return self.selected_target_info
+
+    def get_current_tracking_id(self) -> Optional[int]:
+        """Get the tracking ID of the currently selected target."""
+        return self.current_tracking_id

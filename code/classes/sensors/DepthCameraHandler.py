@@ -13,10 +13,9 @@ from classes.controllers.StateMachine import StateMachine, TurtleBotState, Turtl
 from classes.events import EventQueue, EventType, Event
 
 class DepthCameraHandler:
-    def __init__(self, bridge: CvBridge, state_machine: StateMachine, map_service=None):
+    def __init__(self, bridge: CvBridge, state_machine: StateMachine):
         self.bridge = bridge
         self.state_machine = state_machine
-        self.map_service = map_service
 
         self.target_close_counter = 0
         self.required_frames = 5
@@ -38,6 +37,11 @@ class DepthCameraHandler:
 
         # Store latest calculated coordinates
         self.latest_object_coordinates = {}
+
+        # Simple tracking system for all objects
+        self.object_tracking_map = {}  # Maps (object_class, bbox_hash) -> tracking_id
+        self.world_coord_tracking = {}  # Maps tracking_id -> last_known_world_coords
+        self.next_tracking_id = 1000  # Start from 1000 to distinguish from TargetSelector IDs
 
         # Event queue for decoupled communication
         self.event_queue = EventQueue()
@@ -103,7 +107,8 @@ class DepthCameraHandler:
         self.shared_detections = (
             data.get('all_detections'),
             data.get('target_object'),
-            data.get('selected_target_info')
+            data.get('selected_target_info'),
+            data.get('selected_target_tracking_id')
         )
 
     def set_logger(self, logger):
@@ -118,6 +123,66 @@ class DepthCameraHandler:
     def get_latest_coordinates(self):
         """Get the latest calculated object coordinates"""
         return self.latest_object_coordinates
+
+
+    def _get_or_assign_tracking_id(self, object_class, bbox_hash, world_coords):
+        """Get existing tracking ID or assign new one for non-target objects"""
+
+        # First, try exact bbox_hash match
+        bbox_key = (object_class, bbox_hash)
+        if bbox_key in self.object_tracking_map:
+            tracking_id = self.object_tracking_map[bbox_key]
+            # Update world coordinates for this tracking ID
+            if world_coords:
+                self.world_coord_tracking[tracking_id] = world_coords
+            return tracking_id
+
+        # If no exact match and we have world coordinates, try to match by proximity
+        if world_coords:
+            for existing_tracking_id, last_coords in self.world_coord_tracking.items():
+                if last_coords:
+                    # Calculate 3D distance
+                    dx = world_coords[0] - last_coords[0]
+                    dy = world_coords[1] - last_coords[1]
+                    dz = world_coords[2] - last_coords[2]
+                    distance = (dx*dx + dy*dy + dz*dz) ** 0.5
+
+                    # If within 40cm, consider it the same object
+                    if distance < 0.4:
+                        # Update tracking map with new bbox_hash
+                        self.object_tracking_map[bbox_key] = existing_tracking_id
+                        self.world_coord_tracking[existing_tracking_id] = world_coords
+                        return existing_tracking_id
+
+        # No match found, assign new tracking ID
+        new_tracking_id = self.next_tracking_id
+        self.next_tracking_id += 1
+
+        self.object_tracking_map[bbox_key] = new_tracking_id
+        if world_coords:
+            self.world_coord_tracking[new_tracking_id] = world_coords
+
+        return new_tracking_id
+
+    def _cleanup_old_tracking_data(self):
+        """Remove old tracking data to prevent memory leaks"""
+        # Keep only the most recent 100 tracking IDs to prevent unbounded growth
+        if len(self.world_coord_tracking) > 100:
+            # Sort by tracking_id (newer IDs are higher) and keep the latest 50
+            sorted_ids = sorted(self.world_coord_tracking.keys())
+            ids_to_remove = sorted_ids[:-50]
+
+            for tracking_id in ids_to_remove:
+                del self.world_coord_tracking[tracking_id]
+
+            # Also clean up bbox tracking map
+            bbox_keys_to_remove = []
+            for bbox_key, tracking_id in self.object_tracking_map.items():
+                if tracking_id in ids_to_remove:
+                    bbox_keys_to_remove.append(bbox_key)
+
+            for bbox_key in bbox_keys_to_remove:
+                del self.object_tracking_map[bbox_key]
 
     def transform_to_world_coordinates(self, camera_x, camera_y, camera_z, timestamp):
         """
@@ -168,7 +233,7 @@ class DepthCameraHandler:
 
     def _calculate_world_coordinates(self, depth_image):
         """Calculate world coordinates for all detected objects"""
-        all_detections, target_object, selected_target_info = self.shared_detections
+        all_detections, target_object, selected_target_info, selected_target_tracking_id = self.shared_detections
 
         # Create object coordinate map
         object_coordinates = {}
@@ -223,17 +288,31 @@ class DepthCameraHandler:
                             if self.logger:
                                 self.logger.debug(f"3D coordinate calculation failed: {e}")
 
+                    # Determine if this is the selected target
+                    is_selected = (detected_object_class == target_object and
+                                   selected_target_info and
+                                   detection == selected_target_info)
+
+                    # Calculate bbox hash for tracking
+                    bbox_hash = hash((detection['x1'], detection['y1'], detection['x2'], detection['y2']))
+
+                    # Assign tracking ID: Use TargetSelector ID for selected target, otherwise use our tracking system
+                    if is_selected and selected_target_tracking_id:
+                        tracking_id = selected_target_tracking_id
+                    else:
+                        # Use our tracking system for all non-target objects
+                        tracking_id = self._get_or_assign_tracking_id(detected_object_class, bbox_hash, world_coords)
+
                     # Create object info with coordinates
                     object_info = {
                         'detection': detection,
                         'distance_mm': center_depth if center_depth > 0 else None,
                         'camera_coords': camera_coords,
                         'world_coords': world_coords,
-                        'is_selected_target': (detected_object_class == target_object and
-                                               selected_target_info and
-                                               detection == selected_target_info),
+                        'is_selected_target': is_selected,
+                        'tracking_id': tracking_id,  # Now ALL objects have tracking IDs
                         'object_id': i,  # Unique ID for this specific object instance
-                        'bbox_hash': hash((detection['x1'], detection['y1'], detection['x2'], detection['y2']))  # Hash for matching
+                        'bbox_hash': bbox_hash  # Hash for matching
                     }
 
                     object_coordinates[detected_object_class].append(object_info)
@@ -241,9 +320,8 @@ class DepthCameraHandler:
         # Store coordinates in the handler
         self.latest_object_coordinates = object_coordinates
 
-        # Update map service if available
-        if self.map_service:
-            self.map_service.update_world_object_map(object_coordinates)
+        # Cleanup old tracking data periodically
+        self._cleanup_old_tracking_data()
 
         # Publish world coordinates via event queue
         self.event_queue.publish_event(
