@@ -17,6 +17,8 @@ from classes.topics.TFSubscriber import TFSubscriber
 from classes.utils.TwistWrapper import TwistWrapper
 from classes.services.MapService import MapService
 from classes.services.VisualizationService import VisualizationService
+from classes.services.TargetReachedService import TargetReachedService
+from classes.services.TFService import TFService
 from classes.events import EventQueue, EventType, Event
 
 class TextToTurtlebotNode(Node):
@@ -51,10 +53,19 @@ class TextToTurtlebotNode(Node):
         # Initialize map service for persistent object tracking
         self.map_service = MapService()
 
+        # Initialize TF service for robot transform management
+        self.tf_service = TFService(tf_subscriber=self.tf_subscriber)
+
         # Initialize visualization service
         self.visualization_service = VisualizationService(
             window_size=(1000, 800),
             world_bounds=(-5.0, -5.0, 5.0, 5.0)
+        )
+
+        # Initialize target reached service
+        self.target_reached_service = TargetReachedService(
+            state_machine=self.state_machine,
+            reach_distance_threshold=1.75
         )
 
         # Connect clear map callback
@@ -137,10 +148,8 @@ class TextToTurtlebotNode(Node):
                 print(f'[INFO]: Unknown state: {current_state.value}')
 
     def _update_robot_transforms(self):
-        """Update robot position and orientation in visualization"""
-        robot_position = self.tf_subscriber.get_position()
-        robot_orientation = self.tf_subscriber.get_orientation()
-        self.visualization_service.set_robot_transform_data(robot_position, robot_orientation)
+        """Update robot transform data via TF service"""
+        self.tf_service.update_robot_transforms()
 
     def __del__(self):
         """Cleanup when node is destroyed"""

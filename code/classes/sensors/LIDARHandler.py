@@ -160,7 +160,7 @@ class LIDARHandler:
         if valid_front_ranges:
             front_distance = min(valid_front_ranges)
 
-            if front_distance < 0.5:
+            if front_distance < 0.75:
                 if not self._obstacle_detected:
                     print(f"[LIDAR]: Detected obstacle at {front_distance:.2f}m")
                     direction = 1

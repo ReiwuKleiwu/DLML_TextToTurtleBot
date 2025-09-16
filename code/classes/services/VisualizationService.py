@@ -30,6 +30,7 @@ class VisualizationService:
         self.event_queue.subscribe(EventType.SENSOR_DATA_UPDATED, self._on_map_updated)
         self.event_queue.subscribe(EventType.LIDAR_SCAN_PROCESSED, self._on_lidar_updated)
         self.event_queue.subscribe(EventType.STATE_CHANGED, self._on_state_changed)
+        self.event_queue.subscribe(EventType.ROBOT_TRANSFORM_UPDATED, self._on_robot_transform_updated)
 
     def _on_map_updated(self, event: Event):
         """Handle map service updates with persistent object data"""
@@ -100,21 +101,10 @@ class VisualizationService:
             additional_info=additional_info
         )
 
-    def set_robot_transform_data(self, position, orientation):
-        """Set robot position and orientation (called by TF subscriber)"""
-        self.robot_position = position
-        self.robot_orientation = orientation
-
-        # Publish robot transform event for other services (like MapService)
-        self.event_queue.publish_event(
-            EventType.ROBOT_TRANSFORM_UPDATED,
-            source="VisualizationService",
-            data={
-                'position': position,
-                'orientation': orientation
-            }
-        )
-
+    def _on_robot_transform_updated(self, event: Event):
+        """Handle robot transform updates"""
+        self.robot_position = event.data.get('position')
+        self.robot_orientation = event.data.get('orientation')
         self._update_visualization()
 
     def clear_map(self):

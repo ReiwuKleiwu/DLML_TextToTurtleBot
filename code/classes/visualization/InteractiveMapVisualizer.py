@@ -38,7 +38,9 @@ class InteractiveMapVisualizer:
             'ui_panel': (30, 30, 30),        # Dark gray
             'ui_text': (200, 200, 200),      # Light gray
             'lidar_scan': (100, 150, 255),   # Light blue
-            'lidar_obstacle': (255, 150, 100) # Orange
+            'lidar_obstacle': (255, 150, 100), # Orange
+            'target_line': (255, 255, 0),    # Yellow
+            'distance_text': (255, 255, 0)   # Yellow
         }
 
         # Fonts
@@ -171,6 +173,9 @@ class InteractiveMapVisualizer:
 
             # Draw robot
             self._draw_robot()
+
+            # Draw target line and distance
+            self._draw_target_line()
 
             # Draw UI
             self._draw_ui()
@@ -310,6 +315,134 @@ class InteractiveMapVisualizer:
             end_x = screen_pos[0] + arrow_length * math.cos(yaw)
             end_y = screen_pos[1] - arrow_length * math.sin(yaw)  # Negative because screen Y is flipped
             pygame.draw.line(self.screen, self.colors['text'], screen_pos, (int(end_x), int(end_y)), 3)
+
+    def _draw_target_line(self):
+        """Draw line from robot to target object with distance information"""
+        if not self.robot_position or not self.target_object_class:
+            return
+
+        # Find the closest target object
+        target_objects = self.world_object_map.get(self.target_object_class, [])
+        if not target_objects:
+            return
+
+        robot_screen_pos = self._world_to_screen(self.robot_position[0], self.robot_position[1])
+        if not self._is_visible(robot_screen_pos):
+            return
+
+        # Find the selected target (marked in red) first, fallback to closest if none selected
+        selected_target = None
+        closest_target = None
+        closest_distance = float('inf')
+
+        for obj_info in target_objects:
+            world_coords = obj_info.get('world_coords')
+            if not world_coords or len(world_coords) < 2:
+                continue
+
+            # Check if this is the selected target
+            if obj_info.get('is_selected_target', False):
+                selected_target = obj_info
+                break  # Use the selected target, don't need to check others
+
+            # Keep track of closest as fallback
+            dx = self.robot_position[0] - world_coords[0]
+            dy = self.robot_position[1] - world_coords[1]
+            distance = math.sqrt(dx*dx + dy*dy)
+
+            if distance < closest_distance:
+                closest_distance = distance
+                closest_target = obj_info
+
+        # Use selected target if available, otherwise fallback to closest
+        target_to_use = selected_target if selected_target else closest_target
+
+        if not target_to_use:
+            return
+
+        target_coords = target_to_use['world_coords']
+        target_screen_pos = self._world_to_screen(target_coords[0], target_coords[1])
+
+        # Calculate distance to the selected target for display
+        dx = self.robot_position[0] - target_coords[0]
+        dy = self.robot_position[1] - target_coords[1]
+        distance_to_target = math.sqrt(dx*dx + dy*dy)
+
+        # Only draw if target is visible or line crosses visible area
+        if not (self._is_visible(target_screen_pos) or self._line_intersects_screen(robot_screen_pos, target_screen_pos)):
+            return
+
+        # Draw dashed line from robot to target
+        self._draw_dashed_line(robot_screen_pos, target_screen_pos, self.colors['target_line'], 2, dash_length=10)
+
+        # Calculate midpoint for distance text
+        mid_x = (robot_screen_pos[0] + target_screen_pos[0]) // 2
+        mid_y = (robot_screen_pos[1] + target_screen_pos[1]) // 2
+
+        # Draw distance text with background for better readability
+        distance_text = f"{distance_to_target:.2f}m"
+        text_surface = self.font_medium.render(distance_text, True, self.colors['distance_text'])
+        text_rect = text_surface.get_rect()
+        text_rect.center = (mid_x, mid_y)
+
+        # Draw semi-transparent background for text
+        bg_rect = text_rect.copy()
+        bg_rect.inflate(8, 4)
+        bg_surface = pygame.Surface((bg_rect.width, bg_rect.height))
+        bg_surface.set_alpha(180)
+        bg_surface.fill((0, 0, 0))
+        self.screen.blit(bg_surface, bg_rect)
+
+        # Draw the distance text
+        self.screen.blit(text_surface, text_rect)
+
+    def _draw_dashed_line(self, start_pos, end_pos, color, width, dash_length=5):
+        """Draw a dashed line between two points"""
+        x1, y1 = start_pos
+        x2, y2 = end_pos
+
+        # Calculate line length and direction
+        dx = x2 - x1
+        dy = y2 - y1
+        distance = math.sqrt(dx*dx + dy*dy)
+
+        if distance < 1:
+            return
+
+        # Normalize direction
+        dx_norm = dx / distance
+        dy_norm = dy / distance
+
+        # Draw dashes
+        current_distance = 0
+        while current_distance < distance:
+            # Start of dash
+            start_x = int(x1 + dx_norm * current_distance)
+            start_y = int(y1 + dy_norm * current_distance)
+
+            # End of dash
+            end_distance = min(current_distance + dash_length, distance)
+            end_x = int(x1 + dx_norm * end_distance)
+            end_y = int(y1 + dy_norm * end_distance)
+
+            pygame.draw.line(self.screen, color, (start_x, start_y), (end_x, end_y), width)
+
+            # Skip gap
+            current_distance += dash_length * 2
+
+    def _line_intersects_screen(self, pos1, pos2):
+        """Check if line segment intersects with screen bounds"""
+        x1, y1 = pos1
+        x2, y2 = pos2
+
+        # Simple bounding box check
+        min_x = min(x1, x2)
+        max_x = max(x1, x2)
+        min_y = min(y1, y2)
+        max_y = max(y1, y2)
+
+        return (max_x >= 0 and min_x <= self.window_size[0] and
+                max_y >= 0 and min_y <= self.window_size[1])
 
     def _draw_ui(self):
         """Draw UI information panel"""

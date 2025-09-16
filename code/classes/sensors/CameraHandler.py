@@ -27,6 +27,9 @@ class CameraHandler:
         # Subscribe to map service events for persistent object data
         self.event_queue.subscribe(EventType.SENSOR_DATA_UPDATED, self._on_map_updated)
 
+        # Subscribe to target reached events
+        self.event_queue.subscribe(EventType.TARGET_REACHED, self._on_target_reached)
+
 
     def is_target_close(self, target_info, camera_width, camera_height):
         box_width = target_info['x2'] - target_info['x1']
@@ -48,6 +51,11 @@ class CameraHandler:
     def _on_map_updated(self, event: Event):
         """Handle map service update events with persistent object data"""
         self.persistent_objects_map = event.data.get('persistent_objects_map', {})
+
+    def _on_target_reached(self, event: Event):
+        """Handle target reached events from TargetReachedService"""
+        self.target_object = None
+        self.target_selector.reset()
 
     def handle(self, msg):
         self.get_target_object()
@@ -172,19 +180,22 @@ class CameraHandler:
                 }
             }
         
-        if self.target_close_counter >= self.required_frames:
-            # Objekt wurde für ausreichend Frames als "nah" eingestuft -> OBJECT_REACHED
-            self.state_machine.pop_state(
-                TurtleBotState.OBJECT_FOUND,
-                TurtleBotStateSource.CAMERA
-            )
-            self.state_machine.pop_state(
-                TurtleBotState.EXPLORE,
-                TurtleBotStateSource.USER
-            )
-            self.target_object = None
-            self.target_selector.reset()
-        elif self.state_machine.get_current_state().value == TurtleBotState.OBJECT_FOUND:
+        # COMMENTED OUT: Object reached detection now handled by TargetReachedService based on world coordinates
+        # if self.target_close_counter >= self.required_frames:
+        #     # Objekt wurde für ausreichend Frames als "nah" eingestuft -> OBJECT_REACHED
+        #     self.state_machine.pop_state(
+        #         TurtleBotState.OBJECT_FOUND,
+        #         TurtleBotStateSource.CAMERA
+        #     )
+        #     self.state_machine.pop_state(
+        #         TurtleBotState.EXPLORE,
+        #         TurtleBotStateSource.USER
+        #     )
+        #     self.target_object = None
+        #     self.target_selector.reset()
+        # elif self.state_machine.get_current_state().value == TurtleBotState.OBJECT_FOUND:
+
+        if self.state_machine.get_current_state().value == TurtleBotState.OBJECT_FOUND:
             self.state_machine.get_current_state().set_data(target_state_data)
         else:
             # Objekt wurde erstmals gesehen -> OBJECT_FOUND

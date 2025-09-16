@@ -66,7 +66,7 @@ class MapService:
 
     def __init__(self):
         # Tracking configuration
-        self.consecutive_frames_threshold = 10  # Frames needed before persistence
+        self.consecutive_frames_threshold = 30  # Frames needed before persistence
         self.temporary_match_distance = 0.5     # Distance for frame-to-frame matching (meters)
         self.persistent_match_distance = 1.5    # Distance for re-identification (meters)
         self.temporary_object_timeout = 5.0     # Timeout for temporary objects (seconds)
