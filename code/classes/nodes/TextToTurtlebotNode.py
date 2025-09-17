@@ -19,6 +19,7 @@ from classes.services.MapService import MapService
 from classes.services.VisualizationService import VisualizationService
 from classes.services.TargetReachedService import TargetReachedService
 from classes.services.TFService import TFService
+from classes.navigation.SLAMNavigationService import SLAMNavigationService
 from classes.events import EventQueue, EventType, Event
 
 class TextToTurtlebotNode(Node):
@@ -67,6 +68,9 @@ class TextToTurtlebotNode(Node):
             state_machine=self.state_machine,
             reach_distance_threshold=1.75
         )
+
+        # Initialize SLAM navigation service
+        self.slam_navigation_service = SLAMNavigationService(self)
 
         # Connect clear map callback
         self.visualization_service.map_visualizer.set_clear_map_callback(self.map_service.clear_map)
