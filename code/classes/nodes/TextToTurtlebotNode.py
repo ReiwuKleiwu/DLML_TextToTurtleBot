@@ -20,6 +20,7 @@ from classes.services.VisualizationService import VisualizationService
 from classes.services.TargetReachedService import TargetReachedService
 from classes.services.TFService import TFService
 from classes.navigation.SLAMNavigationService import SLAMNavigationService
+from classes.navigation.TargetSearchNavigator import TargetSearchNavigator
 from classes.events import EventQueue, EventType, Event
 
 class TextToTurtlebotNode(Node):
@@ -71,6 +72,13 @@ class TextToTurtlebotNode(Node):
 
         # Initialize SLAM navigation service
         self.slam_navigation_service = SLAMNavigationService(self)
+
+        # Coordinate stored-target navigation goals with Nav2
+        self.target_search_navigator = TargetSearchNavigator(
+            node=self,
+            state_machine=self.state_machine,
+            navigation_service=self.slam_navigation_service
+        )
 
         # Connect clear map callback
         self.visualization_service.map_visualizer.set_clear_map_callback(self.map_service.clear_map)

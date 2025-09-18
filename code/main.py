@@ -9,7 +9,10 @@ def main(args=None):
 
     text_to_turtlebot_node = TextToTurtlebotNode(namespace="", use_turtlebot_sim=True)
 
+    text_to_turtlebot_node.find_target('chair')
     text_to_turtlebot_node.find_target('person')
+    text_to_turtlebot_node.find_target('chair')
+
 
     try:
         movement_thread = MovementThread(2, text_to_turtlebot_node)
