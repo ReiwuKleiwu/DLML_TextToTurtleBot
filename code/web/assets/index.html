@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>TurtleBot Control Center</title>
+    <link rel="stylesheet" href="/assets/style.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="app-header">
+        <div class="header-actions">
+          <button id="clear-map-button" type="button">Clear Map</button>
+          <button id="reset-view-button" type="button">Reset View</button>
+        </div>
+      </header>
+
+      <main class="dashboard">
+        <section class="map-panel" aria-label="Map visualization">
+          <canvas id="map-canvas" aria-label="Robot map visualization"></canvas>
+          <div class="map-overlay" id="map-overlay">
+            <div class="meta" id="map-meta"></div>
+          </div>
+        </section>
+
+        <aside class="side-panels">
+          <section class="camera-panel" aria-label="Camera feed">
+            <div class="panel-header">
+              <h2>Camera Feed</h2>
+              <span id="camera-status">Loading…</span>
+            </div>
+            <div class="camera-frame">
+              <img id="camera-feed" alt="Live camera stream" />
+            </div>
+          </section>
+
+          <section class="chat-panel" aria-label="LLM conversation">
+            <div class="panel-header">
+              <h2>LLM Assistant</h2>
+              <span id="status-text">Ready.</span>
+            </div>
+            <div class="chat-log" id="chat-log" role="log" aria-live="polite"></div>
+            <form id="chat-form" class="chat-form" autocomplete="off">
+              <input
+                id="chat-input"
+                type="text"
+                placeholder="Type a command or question…"
+                aria-label="Message"
+                required
+              />
+              <button id="send-button" type="submit">Send</button>
+            </form>
+          </section>
+
+          <section class="info-panel" aria-label="Robot information">
+            <div class="panel-header">
+              <h2>Robot Snapshot</h2>
+              <button id="snapshot-button" type="button">Refresh</button>
+            </div>
+            <pre id="snapshot-output" class="snapshot-output">{}</pre>
+
+            <div class="stack-panel">
+              <h3>State Stack</h3>
+              <ol id="state-stack" class="stack-list" aria-live="polite"></ol>
+            </div>
+          </section>
+        </aside>
+      </main>
+    </div>
+
+    <script type="module" src="/assets/app.js"></script>
+  </body>
+</html>

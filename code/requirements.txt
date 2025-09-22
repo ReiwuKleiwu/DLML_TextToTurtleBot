@@ -8,7 +8,11 @@ numpy == 1.26.4
 bitsandbytes
 accelerate
 rclpy
-tf2-ros
 tf2-geometry-msgs
 pyrealsense2
 pygame
+langchain
+langchain-google-genai
+fastapi
+uvicorn
+aiofiles

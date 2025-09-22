@@ -1,27 +1,42 @@
+"""Application entrypoint wiring the ROS node and orchestration."""
+from __future__ import annotations
+
+import sys
+from pathlib import Path
+
+
+PACKAGE_ROOT = Path(__file__).resolve().parent
+REPO_ROOT = PACKAGE_ROOT.parent
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
 import rclpy
 
-from classes.nodes.TextToTurtlebotNode import TextToTurtlebotNode
-from classes.controllers.MovementThread import MovementThread
+from code.application.runtime.control_loop import ControlLoop
+from code.infrastructure.event.threaded_event_bus import ThreadedEventBus
+from code.infrastructure.ros.node import TurtleBotNode
 
 
-def main(args=None):
+def main(args=None) -> None:
     rclpy.init(args=args)
 
-    text_to_turtlebot_node = TextToTurtlebotNode(namespace="", use_turtlebot_sim=True)
+    event_bus = ThreadedEventBus()
+    event_bus.start()
 
-    text_to_turtlebot_node.find_target('chair')
-    text_to_turtlebot_node.find_target('person')
-    text_to_turtlebot_node.find_target('chair')
+    node = TurtleBotNode(event_bus=event_bus, namespace="", use_turtlebot_sim=True)
 
+    control_loop = ControlLoop(rate_hz=2.0, tick_callback=node.orchestrator.perform_control_step)
+    control_loop.start()
 
     try:
-        movement_thread = MovementThread(2, text_to_turtlebot_node)
-        rclpy.spin(text_to_turtlebot_node)
-        text_to_turtlebot_node.destroy_node()
-        rclpy.shutdown()
+        rclpy.spin(node)
     finally:
-        movement_thread.end()
-    
+        control_loop.stop()
+        control_loop.join()
+        node.destroy_node()
+        event_bus.stop()
+        rclpy.shutdown()
+
 
 if __name__ == '__main__':
     main()
