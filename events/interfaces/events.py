@@ -1,0 +1,35 @@
+"""Domain event definitions for the TurtleBot text command system."""
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+from enum import Enum
+import time
+from typing import Any, Dict
+
+
+class EventType(str, Enum):
+    """Enumerates the domain events shared across the system."""
+    
+    LIDAR_OBSTACLE_PRESENT = "lidar-obstacle-present"
+    LIDAR_OBSTACLE_ABSENT = "lidar-no-obstacle-absent"
+
+    OBJECTS_DETECTED = "objects-detected"
+    OBJECT_WORLD_COORDINATES_UPDATED = "object-world-coordinates-updated"
+
+    TARGET_OBJECT_SELECTED = "target-object-selected"
+    TARGET_REACHED = 'target-reached'
+
+    ROBOT_POSITION_UPDATED = "robot-position-updated"
+    ROBOT_ORIENTATION_UPDATED = "robot-orientation-updated"
+    ROBOT_IS_TURNING_UPDATED = "robot-is-turning-update"
+
+    MAP_UPDATED = "map-updated"
+
+
+@dataclass(slots=True)
+class DomainEvent:
+    """Immutable payload describing a published domain event."""
+
+    event_type: EventType
+    data: Any
+    timestamp: float = field(default_factory=lambda: time.time())
