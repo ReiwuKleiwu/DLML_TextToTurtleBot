@@ -27,3 +27,7 @@ class BlackboardDataKey(str, Enum):
     ROTATE_START_YAW = 'rotate-start-yaw'
     ROTATE_ANGLE_TRAVELLED = 'rotate-angle-travelled'
     ROTATE_DIRECTION_SIGN = 'rotate-direction-sign'
+
+    NAVIGATION_CURRENT_GOAL = 'navigation-current-goal'
+    NAVIGATION_STATUS = 'navigation-status'
+    NAVIGATION_FEEDBACK = 'navigation-feedback'

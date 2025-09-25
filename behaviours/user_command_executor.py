@@ -8,6 +8,9 @@ from blackboard.blackboard import Blackboard
 from commands.user_command import CommandType, UserCommand
 from behaviours.skills.drive.drive_skill import DriveSkill
 from behaviours.skills.rotate.rotate_skill import RotateSkill
+from behaviours.skills.navigate.navigate_skill import NavigateSkill
+from navigation.nav2_client import Nav2Client
+from rclpy.node import Node
 from events.event_bus import EventBus
 from events.interfaces.events import DomainEvent, EventType
 from utils.twist_wrapper import TwistWrapper
@@ -16,7 +19,7 @@ from utils.twist_wrapper import TwistWrapper
 class UserCommandExecutor(py_trees.behaviour.Behaviour):
     """Dispatch user commands to the appropriate skill subtree."""
 
-    def __init__(self, name: str) -> None:
+    def __init__(self, name: str, nav_client: Nav2Client, node: Node) -> None:
         super().__init__(name)
         self._blackboard: Blackboard = Blackboard()
         self._event_bus: EventBus = EventBus()
@@ -24,6 +27,8 @@ class UserCommandExecutor(py_trees.behaviour.Behaviour):
         self._publisher = None
         self._active_skill: Optional[py_trees.behaviour.Behaviour] = None
         self._active_command: Optional[UserCommand] = None
+        self._nav_client = nav_client
+        self._node = node
 
     def setup(
         self,
@@ -103,6 +108,15 @@ class UserCommandExecutor(py_trees.behaviour.Behaviour):
             if command is not None:
                 skill = RotateSkill(f"RotateSkill-{command.command_id[:8]}", command)
                 skill.setup(self._twist, self._publisher)
+        elif next_command.command_type == CommandType.NAVIGATE_TO_POSE:
+            command = self._blackboard.pop_command()
+            if command is not None:
+                skill = NavigateSkill(
+                    f"NavigateSkill-{command.command_id[:8]}",
+                    command,
+                    self._node,
+                    self._nav_client,
+                )
         else:
             self.logger.warn(f"Unsupported command type: {next_command.command_type}")
             dropped = self._blackboard.pop_command()

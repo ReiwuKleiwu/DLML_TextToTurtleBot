@@ -38,6 +38,15 @@ class EventType(str, Enum):
     ROTATE_PROGRESS_UPDATED = "rotate-progress-updated"
     ROTATE_GOAL_CLEARED = "rotate-goal-cleared"
 
+    NAVIGATION_GOAL_SENT = "navigation-goal-sent"
+    NAVIGATION_GOAL_ACCEPTED = "navigation-goal-accepted"
+    NAVIGATION_GOAL_REJECTED = "navigation-goal-rejected"
+    NAVIGATION_GOAL_SUCCEEDED = "navigation-goal-succeeded"
+    NAVIGATION_GOAL_ABORTED = "navigation-goal-aborted"
+    NAVIGATION_GOAL_CANCELLED = "navigation-goal-cancelled"
+    NAVIGATION_FEEDBACK = "navigation-feedback"
+    NAVIGATION_GOAL_CLEARED = "navigation-goal-cleared"
+
 
 @dataclass(slots=True)
 class DomainEvent:

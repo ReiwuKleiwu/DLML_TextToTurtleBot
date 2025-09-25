@@ -58,3 +58,5 @@ class UserCommand:
             EventBus().publish(DomainEvent(EventType.DRIVE_GOAL_CLEARED, None))
         elif self.command_type == CommandType.ROTATE:
             EventBus().publish(DomainEvent(EventType.ROTATE_GOAL_CLEARED, None))
+        elif self.command_type == CommandType.NAVIGATE_TO_POSE:
+            EventBus().publish(DomainEvent(EventType.NAVIGATION_GOAL_CLEARED, None))

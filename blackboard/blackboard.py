@@ -37,6 +37,14 @@ class Blackboard(metaclass=SingletonMeta):
         self._event_bus.subscribe(EventType.ROTATE_GOAL_SET, self._on_rotate_goal_set)
         self._event_bus.subscribe(EventType.ROTATE_PROGRESS_UPDATED, self._on_rotate_progress_updated)
         self._event_bus.subscribe(EventType.ROTATE_GOAL_CLEARED, self._on_rotate_goal_cleared)
+        self._event_bus.subscribe(EventType.NAVIGATION_GOAL_SENT, self._on_navigation_goal_sent)
+        self._event_bus.subscribe(EventType.NAVIGATION_GOAL_ACCEPTED, self._on_navigation_goal_accepted)
+        self._event_bus.subscribe(EventType.NAVIGATION_GOAL_REJECTED, self._on_navigation_goal_rejected)
+        self._event_bus.subscribe(EventType.NAVIGATION_GOAL_SUCCEEDED, self._on_navigation_goal_succeeded)
+        self._event_bus.subscribe(EventType.NAVIGATION_GOAL_ABORTED, self._on_navigation_goal_aborted)
+        self._event_bus.subscribe(EventType.NAVIGATION_GOAL_CANCELLED, self._on_navigation_goal_cancelled)
+        self._event_bus.subscribe(EventType.NAVIGATION_FEEDBACK, self._on_navigation_feedback)
+        self._event_bus.subscribe(EventType.NAVIGATION_GOAL_CLEARED, self._on_navigation_goal_cleared)
 
         self._set(BlackboardDataKey.TARGET_OBJECT_CLASS, 'chair')
         self._set(BlackboardDataKey.COMMAND_QUEUE, [])
@@ -49,6 +57,9 @@ class Blackboard(metaclass=SingletonMeta):
         self._set(BlackboardDataKey.ROTATE_START_YAW, None)
         self._set(BlackboardDataKey.ROTATE_ANGLE_TRAVELLED, 0.0)
         self._set(BlackboardDataKey.ROTATE_DIRECTION_SIGN, None)
+        self._set(BlackboardDataKey.NAVIGATION_CURRENT_GOAL, None)
+        self._set(BlackboardDataKey.NAVIGATION_STATUS, None)
+        self._set(BlackboardDataKey.NAVIGATION_FEEDBACK, None)
 
         self._seed_rectangle_commands()
 
@@ -136,14 +147,17 @@ class Blackboard(metaclass=SingletonMeta):
     def _seed_rectangle_commands(self) -> None:
         """Seed the queue with commands to drive a 1m x 1m rectangle."""
         sequence = [
-            UserCommand.drive(distance_m=1.0, direction="forward"),
+            UserCommand.navigate(x=1.0, y=1.0, theta=0.0),
+            UserCommand.drive(distance_m=0.3, direction="forward"),
             UserCommand.rotate(angle_deg=90.0, direction="left"),
-            UserCommand.drive(distance_m=1.0, direction="forward"),
+            UserCommand.drive(distance_m=0.3, direction="forward"),
             UserCommand.rotate(angle_deg=90.0, direction="left"),
-            UserCommand.drive(distance_m=1.0, direction="forward"),
+            UserCommand.navigate(x=2.0, y=2.0, theta=0.0),
+            UserCommand.drive(distance_m=0.3, direction="forward"),
             UserCommand.rotate(angle_deg=90.0, direction="left"),
-            UserCommand.drive(distance_m=1.0, direction="forward"),
+            UserCommand.drive(distance_m=0.3, direction="forward"),
             UserCommand.rotate(angle_deg=90.0, direction="left"),
+            UserCommand.navigate(x=1.0, y=1.0, theta=0.0),
         ]
 
         for command in sequence:
@@ -187,6 +201,7 @@ class Blackboard(metaclass=SingletonMeta):
         command.cleanup()
 
     def _on_command_received(self, event: DomainEvent):
+        # data is of type UserCommand
         command = event.data
         if not isinstance(command, UserCommand):
             return
@@ -245,6 +260,47 @@ class Blackboard(metaclass=SingletonMeta):
     def _on_rotate_goal_cleared(self, event: DomainEvent) -> None:
         # data is None
         self.clear_rotate_goal()
+
+    def _on_navigation_goal_sent(self, event: DomainEvent):
+        # data is of type geometry_msgs.msg.PoseStamped
+        goal = event.data
+        self._set(BlackboardDataKey.NAVIGATION_CURRENT_GOAL, goal)
+        self._set(BlackboardDataKey.NAVIGATION_STATUS, "sent")
+
+    def _on_navigation_goal_accepted(self, event: DomainEvent):
+        # data is of type geometry_msgs.msg.PoseStamped
+        goal = event.data
+        self._set(BlackboardDataKey.NAVIGATION_CURRENT_GOAL, goal)
+        self._set(BlackboardDataKey.NAVIGATION_STATUS, "accepted")
+
+    def _on_navigation_goal_rejected(self, event: DomainEvent):
+        # data is of type geometry_msgs.msg.PoseStamped or None
+        self._set(BlackboardDataKey.NAVIGATION_STATUS, "rejected")
+
+    def _on_navigation_goal_succeeded(self, event: DomainEvent):
+        # data is of type geometry_msgs.msg.PoseStamped or None
+        goal = event.data
+        if goal is not None:
+            self._set(BlackboardDataKey.NAVIGATION_CURRENT_GOAL, goal)
+        self._set(BlackboardDataKey.NAVIGATION_STATUS, "succeeded")
+
+    def _on_navigation_goal_aborted(self, event: DomainEvent):
+        # data is of type geometry_msgs.msg.PoseStamped or None
+        self._set(BlackboardDataKey.NAVIGATION_STATUS, "aborted")
+
+    def _on_navigation_goal_cancelled(self, event: DomainEvent):
+        # data is of type geometry_msgs.msg.PoseStamped or None
+        self._set(BlackboardDataKey.NAVIGATION_STATUS, "cancelled")
+
+    def _on_navigation_feedback(self, event: DomainEvent):
+        # data is of type nav2_msgs.action.NavigateToPose.Feedback
+        self._set(BlackboardDataKey.NAVIGATION_FEEDBACK, event.data)
+
+    def _on_navigation_goal_cleared(self, event: DomainEvent):
+        # data is None
+        self._set(BlackboardDataKey.NAVIGATION_CURRENT_GOAL, None)
+        self._set(BlackboardDataKey.NAVIGATION_STATUS, None)
+        self._set(BlackboardDataKey.NAVIGATION_FEEDBACK, None)
 
     def _on_lidar_obstacle_present(self, event: DomainEvent):
         self._set(BlackboardDataKey.LIDAR_OBSTACLE_PRESENT, True)

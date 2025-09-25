@@ -14,7 +14,9 @@ from geometry_msgs.msg import Twist, TwistStamped
 from utils.twist_wrapper import TwistWrapper
 from behaviours.actions.turn_around import TurnAround
 from behaviours.conditions.check_lidar import CheckLidar
+from behaviours.conditions.navigation_goal_idle import NavigationGoalIdle
 from behaviours.user_command_executor import UserCommandExecutor
+from navigation.nav2_client import Nav2Client
 from sensor_msgs.msg import LaserScan, Image, CameraInfo
 from events.event_bus import EventBus
 from blackboard.blackboard import Blackboard
@@ -35,6 +37,8 @@ class TextToTurtlebotNode(Node):
         self._twist = TwistWrapper(use_stamped=use_turtlebot_sim)
         msg_type = TwistStamped if use_turtlebot_sim else Twist
         self._cmd_publisher = self.create_publisher(msg_type, 'cmd_vel', 10)
+
+        self._nav_client = Nav2Client(self)
 
         self.map = Map(self)
 
@@ -116,13 +120,15 @@ class TextToTurtlebotNode(Node):
         check_lidar.setup()
         obstacle_detected = py_trees.decorators.Inverter(name="ObstacleDetected", child=check_lidar)
 
+        navigation_goal_idle = NavigationGoalIdle("NavigationGoalIdle")
+
         turn_around = TurnAround("TurnAround")
         turn_around.setup(self._twist, self._cmd_publisher)
 
-        user_command_executor = UserCommandExecutor("UserCommandExecutor")
+        user_command_executor = UserCommandExecutor("UserCommandExecutor", self._nav_client, self)
         user_command_executor.setup(self._twist, self._cmd_publisher)
 
-        obstacle_sequence.add_children([obstacle_detected, turn_around])
+        obstacle_sequence.add_children([obstacle_detected, navigation_goal_idle, turn_around])
         root.add_children([obstacle_sequence, user_command_executor])
         return root
 
