@@ -25,6 +25,11 @@ class EventType(str, Enum):
 
     MAP_UPDATED = "map-updated"
 
+    COMMAND_RECEIVED = "command-received"
+    COMMAND_STARTED = "command-started"
+    COMMAND_COMPLETED = "command-completed"
+    COMMAND_CANCELLED = "command-cancelled"
+
 
 @dataclass(slots=True)
 class DomainEvent:

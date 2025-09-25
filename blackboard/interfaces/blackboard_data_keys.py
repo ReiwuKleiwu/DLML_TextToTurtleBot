@@ -1,5 +1,6 @@
 from enum import Enum
 
+
 class BlackboardDataKey(str, Enum):
     LIDAR_OBSTACLE_PRESENT = "lidar-obstacle-present"
 
@@ -13,3 +14,6 @@ class BlackboardDataKey(str, Enum):
     ROBOT_IS_TURNING = 'robot-is-turning'
 
     ROBOT_MAP = "robot-map"
+
+    COMMAND_QUEUE = 'command-queue'
+    ACTIVE_COMMAND_ID = 'active-command-id'
