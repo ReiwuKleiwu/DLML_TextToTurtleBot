@@ -48,3 +48,13 @@ class UserCommand:
             command_type=CommandType.FIND_OBJECT,
             parameters={"object_class": object_class},
         )
+
+    def cleanup(self) -> None:
+        """Reset any blackboard state associated with this command."""
+        from events.event_bus import EventBus
+        from events.interfaces.events import DomainEvent, EventType
+
+        if self.command_type == CommandType.DRIVE:
+            EventBus().publish(DomainEvent(EventType.DRIVE_GOAL_CLEARED, None))
+        elif self.command_type == CommandType.ROTATE:
+            EventBus().publish(DomainEvent(EventType.ROTATE_GOAL_CLEARED, None))

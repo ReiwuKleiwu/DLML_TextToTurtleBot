@@ -1,7 +1,5 @@
-import math
 from py_trees.behaviour import Behaviour
 from py_trees.common import Status
-from sensor_msgs.msg import LaserScan
 from blackboard.blackboard import Blackboard, BlackboardDataKey
 
 class CheckLidar(Behaviour):

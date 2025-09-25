@@ -30,6 +30,14 @@ class EventType(str, Enum):
     COMMAND_COMPLETED = "command-completed"
     COMMAND_CANCELLED = "command-cancelled"
 
+    DRIVE_GOAL_SET = "drive-goal-set"
+    DRIVE_PROGRESS_UPDATED = "drive-progress-updated"
+    DRIVE_GOAL_CLEARED = "drive-goal-cleared"
+
+    ROTATE_GOAL_SET = "rotate-goal-set"
+    ROTATE_PROGRESS_UPDATED = "rotate-progress-updated"
+    ROTATE_GOAL_CLEARED = "rotate-goal-cleared"
+
 
 @dataclass(slots=True)
 class DomainEvent:

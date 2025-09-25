@@ -12,9 +12,9 @@ from rclpy.node import Node
 import py_trees
 from geometry_msgs.msg import Twist, TwistStamped
 from utils.twist_wrapper import TwistWrapper
-from behaviours.drive_forward import DriveForward
-from behaviours.turn_around import TurnAround
-from behaviours.check_lidar import CheckLidar
+from behaviours.actions.turn_around import TurnAround
+from behaviours.conditions.check_lidar import CheckLidar
+from behaviours.user_command_executor import UserCommandExecutor
 from sensor_msgs.msg import LaserScan, Image, CameraInfo
 from events.event_bus import EventBus
 from blackboard.blackboard import Blackboard
@@ -110,23 +110,24 @@ class TextToTurtlebotNode(Node):
 
     def create_behaviour_tree(self):
         root = py_trees.composites.Selector("Root", memory=False)
-        sequence = py_trees.composites.Sequence("Sequence", memory=False)
-        
+        obstacle_sequence = py_trees.composites.Sequence("HandleObstacle", memory=False)
+
         check_lidar = CheckLidar("CheckLidarObstacle")
         check_lidar.setup()
+        obstacle_detected = py_trees.decorators.Inverter(name="ObstacleDetected", child=check_lidar)
 
         turn_around = TurnAround("TurnAround")
         turn_around.setup(self._twist, self._cmd_publisher)
 
-        drive_forward = DriveForward("DriveForward")
-        drive_forward.setup(self._twist, self._cmd_publisher)
+        user_command_executor = UserCommandExecutor("UserCommandExecutor")
+        user_command_executor.setup(self._twist, self._cmd_publisher)
 
-        sequence.add_children([check_lidar, turn_around])
-        root.add_children([sequence, drive_forward])
+        obstacle_sequence.add_children([obstacle_detected, turn_around])
+        root.add_children([obstacle_sequence, user_command_executor])
         return root
 
     def tick(self):
-        # self.root.tick_once()
+        self.root.tick_once()
         return
 
     def _run_tree_loop(self) -> None:

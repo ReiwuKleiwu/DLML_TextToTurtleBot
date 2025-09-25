@@ -16,4 +16,14 @@ class BlackboardDataKey(str, Enum):
     ROBOT_MAP = "robot-map"
 
     COMMAND_QUEUE = 'command-queue'
-    ACTIVE_COMMAND_ID = 'active-command-id'
+    ACTIVE_COMMAND = 'active-command'
+
+    DRIVE_TARGET_DISTANCE = 'drive-target-distance'
+    DRIVE_START_POSE = 'drive-start-pose'
+    DRIVE_DISTANCE_TRAVELLED = 'drive-distance-travelled'
+    DRIVE_DIRECTION_SIGN = 'drive-direction-sign'
+
+    ROTATE_TARGET_ANGLE = 'rotate-target-angle'
+    ROTATE_START_YAW = 'rotate-start-yaw'
+    ROTATE_ANGLE_TRAVELLED = 'rotate-angle-travelled'
+    ROTATE_DIRECTION_SIGN = 'rotate-direction-sign'
