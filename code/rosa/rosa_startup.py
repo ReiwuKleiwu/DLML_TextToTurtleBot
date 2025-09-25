@@ -54,5 +54,15 @@ prompts = RobotSystemPrompts(
 )
 
 llm = get_your_llm_here()
-rosa = ROSA(ros_version=1, llm=llm, tools=[], prompts=prompts)
-rosa.invoke("Move forward by 2 units.")
+agent = ROSA(ros_version=1, llm=llm, tools=[], prompts=prompts)
+
+print("Starte Chat mit ROSA (tippe 'exit' zum Beenden) \n")
+
+while True:
+    user_input = input("Du: ").strip()
+    if user_input.lower() in ("exit", "quit"):
+        print("Beende Chat.")
+        break
+
+    reply = agent.chat(user_input)
+    print("ROSA: ", reply, "\n")
