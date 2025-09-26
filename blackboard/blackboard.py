@@ -1,7 +1,7 @@
 # Singleton Blackboard for sharing data across the behavior tree
 from collections import deque
 from typing import Deque, Optional
-from threading import Timer
+from threading import RLock, Timer
 
 from utils.singleton_meta import SingletonMeta
 from events.event_bus import EventBus
@@ -17,6 +17,7 @@ class Blackboard(metaclass=SingletonMeta):
 
         # Internal command queue storage (FIFO)
         self._command_queue: Deque[UserCommand] = deque()
+        self._command_lock = RLock()
 
         self._event_bus.subscribe(EventType.LIDAR_OBSTACLE_PRESENT, self._on_lidar_obstacle_present)
         self._event_bus.subscribe(EventType.LIDAR_OBSTACLE_ABSENT, self._on_lidar_obstacle_absent)
@@ -91,7 +92,7 @@ class Blackboard(metaclass=SingletonMeta):
         nav_5 = UserCommand.navigate(3.0, 1.0)
         nav_6 = UserCommand.navigate(3.5, 1.0)
 
-        commands = [nav_1, nav_2, nav_3, nav_4, nav_5, nav_6]
+        commands = [nav_1, nav_2, nav_3, nav_4, nav_5, nav_6, find_chair]
 
         for command in commands:
             self.enqueue_command(command)
@@ -104,64 +105,73 @@ class Blackboard(metaclass=SingletonMeta):
 
     def enqueue_command(self, command: UserCommand) -> None:
         """Push a user command to the queue and mirror the state on the blackboard."""
-        self._command_queue.append(command)
-        self._sync_command_queue()
+        with self._command_lock:
+            self._command_queue.append(command)
+            self._sync_command_queue()
 
     def pop_command(self) -> Optional[UserCommand]:
         """Remove and return the next command, updating the published queue state."""
-        if not self._command_queue:
-            return None
-        command = self._command_queue.popleft()
-        self._sync_command_queue()
-        return command
+        with self._command_lock:
+            if not self._command_queue:
+                return None
+            command = self._command_queue.popleft()
+            self._sync_command_queue()
+            return command
 
     def peek_command(self) -> Optional[UserCommand]:
         """Return, without removing, the next command in the queue."""
-        return self._command_queue[0] if self._command_queue else None
+        with self._command_lock:
+            return self._command_queue[0] if self._command_queue else None
 
     def clear_commands(self) -> None:
         """Remove all pending commands and cancel any active one."""
         # Drop any queued commands and mirror the empty queue on the blackboard.
-        self._command_queue.clear()
-        self._sync_command_queue()
+        with self._command_lock:
+            self._command_queue.clear()
+            self._sync_command_queue()
 
         # Cancel the active command (if any) to release related state.
         self.cancel_active_command()
 
     def cancel_active_command(self) -> Optional[UserCommand]:
         """Cancel the currently active command, removing it from the queue if present."""
-        active_command: Optional[UserCommand] = self.get(BlackboardDataKey.ACTIVE_COMMAND)
+        with self._command_lock:
+            active_command: Optional[UserCommand] = self.get(BlackboardDataKey.ACTIVE_COMMAND)
 
-        if not isinstance(active_command, UserCommand):
-            return None
-        
-        print(f"Cancelling active command: {active_command.command_id}")
+            if not isinstance(active_command, UserCommand):
+                return None
 
-        # This should theoretically never happen, but just in case
-        self._remove_command_by_id(active_command.command_id)
+            print(f"Cancelling active command: {active_command.command_id}")
 
-        self.set_active_command(None)
+            # This should theoretically never happen, but just in case
+            self._remove_command_by_id(active_command.command_id)
+
+            self.set_active_command(None)
+
         active_command.cleanup()
         return active_command
 
     def set_active_command(self, command: Optional[UserCommand]) -> None:
         """Update the currently executing command."""
-        self._set(BlackboardDataKey.ACTIVE_COMMAND, command)
+        with self._command_lock:
+            self._set(BlackboardDataKey.ACTIVE_COMMAND, command)
 
     def _sync_command_queue(self) -> None:
         """Expose a snapshot of the command queue via the blackboard data store."""
-        self._set(BlackboardDataKey.COMMAND_QUEUE, list(self._command_queue))
+        with self._command_lock:
+            self._set(BlackboardDataKey.COMMAND_QUEUE, list(self._command_queue))
 
     def _remove_command_by_id(self, command_id: str) -> Optional[UserCommand]:
         """Remove a queued command by identifier and return it if present."""
-        if not self._command_queue:
-            return None
+        with self._command_lock:
+            if not self._command_queue:
+                return None
 
-        for command in list(self._command_queue):
-            if command.command_id == command_id:
-                self._command_queue.remove(command)
-                self._sync_command_queue()
-                return command
+            for command in list(self._command_queue):
+                if command.command_id == command_id:
+                    self._command_queue.remove(command)
+                    self._sync_command_queue()
+                    return command
         return None
     
     ### Event Handlers ###
