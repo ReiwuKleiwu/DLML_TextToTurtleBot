@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 from enum import Enum, auto
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 from uuid import uuid4
 import time
 
@@ -22,10 +22,13 @@ class UserCommand:
     timestamp: float = field(default_factory=time.time)
 
     @classmethod
-    def navigate(cls, x: float, y: float, theta: float = 0.0):
+    def navigate(cls, x: float, y: float, theta: Optional[float] = None):
+        pose = {"x": x, "y": y}
+        if theta is not None:
+            pose["theta"] = theta
         return cls(
             command_type=CommandType.NAVIGATE_TO_POSE,
-            parameters={"pose": {"x": x, "y": y, "theta": theta}},
+            parameters={"pose": pose},
         )
 
     @classmethod
