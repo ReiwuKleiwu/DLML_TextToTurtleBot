@@ -39,7 +39,7 @@ class DriveMotion(py_trees.behaviour.Behaviour):
         direction_sign = self._blackboard.get(BlackboardDataKey.DRIVE_DIRECTION_SIGN, 1)
 
         if target_distance is None or start_pose is None or direction_sign is None:
-            self.logger.warn("Drive goal not configured on blackboard")
+            self.logger.error("Drive goal not configured on blackboard")
             return Status.FAILURE
 
         current_pose = self._blackboard.get(BlackboardDataKey.ROBOT_POSITION)

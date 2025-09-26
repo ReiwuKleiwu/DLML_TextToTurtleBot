@@ -1,5 +1,7 @@
+import queue
 import threading
 import time
+from typing import List, Optional
 
 from cv_bridge import CvBridge
 from perception.camera.camera_processor import CameraProcessor
@@ -18,9 +20,12 @@ from behaviours.conditions.navigation_goal_idle import NavigationGoalIdle
 from behaviours.user_command_executor import UserCommandExecutor
 from navigation.nav2_client import Nav2Client
 from sensor_msgs.msg import LaserScan, Image, CameraInfo
+from std_msgs.msg import String
 from events.event_bus import EventBus
 from blackboard.blackboard import Blackboard
 from map.map import Map
+from natural_language_processing.llm_api import LLMAPI
+from langchain_core.messages import BaseMessage
 
 from perception.lidar.lidar_processor import LidarProcessor
 
@@ -73,6 +78,11 @@ class TextToTurtlebotNode(Node):
 
         self.root = self.create_behaviour_tree()
 
+        # LLM agent integration
+        self._llm_api = LLMAPI()
+        self._llm_history: List[BaseMessage] = []
+        self._llm_requests: "queue.Queue[Optional[str]]" = queue.Queue()
+
         self._tick_period = 0.1
         self._shutdown_event = threading.Event()
         self._tick_thread = threading.Thread(
@@ -80,8 +90,15 @@ class TextToTurtlebotNode(Node):
             name="behaviour-tree-tick",
             daemon=True,
         )
-        
+
+        self._llm_thread = threading.Thread(
+            target=self._run_llm_loop,
+            name="llm-agent-loop",
+            daemon=True,
+        )
+
         self._tick_thread.start()
+        self._llm_thread.start()
 
 
         self.create_subscription(
@@ -112,6 +129,13 @@ class TextToTurtlebotNode(Node):
             10
         )
 
+        self.create_subscription(
+            String,
+            'llm_instruction',
+            self._handle_llm_instruction,
+            10,
+        )
+
     def create_behaviour_tree(self):
         root = py_trees.composites.Selector("Root", memory=False)
         obstacle_sequence = py_trees.composites.Sequence("HandleObstacle", memory=False)
@@ -136,6 +160,40 @@ class TextToTurtlebotNode(Node):
         self.root.tick_once()
         return
 
+    # LLM agent handling
+
+    def submit_llm_instruction(self, instruction: str) -> None:
+        """Queue a natural language instruction for the LLM controller."""
+        if not instruction:
+            return
+        self._llm_requests.put(instruction)
+
+    def _handle_llm_instruction(self, msg: String) -> None:
+        instruction = msg.data.strip()
+        if not instruction:
+            return
+        self.get_logger().info(f"Received LLM instruction: {instruction}")
+        self.submit_llm_instruction(instruction)
+
+    def _run_llm_loop(self) -> None:
+        while not self._shutdown_event.is_set():
+            try:
+                instruction = self._llm_requests.get(timeout=0.5)
+            except queue.Empty:
+                continue
+
+            if instruction is None or self._shutdown_event.is_set():
+                break
+
+            try:
+                result = self._llm_api.run(instruction, history=self._llm_history)
+                self._llm_history = list(result.get("chat_history", []))
+                response_text = result.get("output", "")
+                if response_text:
+                    self.get_logger().info(f"LLM response: {response_text}")
+            except Exception as exc:  # noqa: BLE001 - capture LLM issues without crashing node
+                self.get_logger().error(f"LLM processing failed: {exc}")
+
     def _run_tree_loop(self) -> None:
         while not self._shutdown_event.is_set():
             if self._blackboard.is_behaviour_tree_paused():
@@ -154,6 +212,9 @@ class TextToTurtlebotNode(Node):
 
     def destroy_node(self):
         self._shutdown_event.set()
+        self._llm_requests.put(None)
         if self._tick_thread.is_alive():
             self._tick_thread.join(timeout=1.0)
+        if self._llm_thread.is_alive():
+            self._llm_thread.join(timeout=1.0)
         return super().destroy_node()

@@ -4,3 +4,4 @@ rclpy
 ultralytics
 langchain
 pydantic
+langchain-google-genai

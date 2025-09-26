@@ -65,7 +65,7 @@ class Blackboard(metaclass=SingletonMeta):
         self._set(BlackboardDataKey.NAVIGATION_FEEDBACK, None)
         self._set(BlackboardDataKey.BEHAVIOUR_TREE_PAUSED, False)
 
-        self._seed_test_commands()
+        # self._seed_test_commands()
 
     # The blackboard is readonly from the outside!
     def _set(self, key, value):
@@ -94,31 +94,7 @@ class Blackboard(metaclass=SingletonMeta):
     # Command handling
 
     def _seed_test_commands(self) -> None:
-
-        # nav_command = UserCommand.navigate(1.0, 1.0)
-        # rotate_command = UserCommand.rotate(90, 'left')
-        # drive_command = UserCommand.drive(1.0, 'forward')
-        # nav_command_2 = UserCommand.navigate(10.0, -4.0)
-        find_chair = UserCommand.find_object('chair')
-        # navigate_to_point = UserCommand.navigate(1.0, 1.0)
-        # find_person = UserCommand.find_object('person')
-
-        nav_1 = UserCommand.navigate(1.0, 1.0)
-        nav_2 = UserCommand.navigate(1.5, 1.0)
-        nav_3 = UserCommand.navigate(2.0, 1.0)
-        nav_4 = UserCommand.navigate(2.5, 1.0)
-        nav_5 = UserCommand.navigate(3.0, 1.0)
-        nav_6 = UserCommand.navigate(3.5, 1.0)
-
-        commands = [nav_1, nav_2, nav_3, nav_4, nav_5, nav_6, find_chair]
-
-        for command in commands:
-            self.enqueue_command(command)
-
-        # def cancel_pending_find() -> None:
-        #    self.cancel_active_command()
-
-        # Timer(20.0, cancel_pending_find).start()
+        pass
 
 
     def enqueue_command(self, command: UserCommand) -> None:

@@ -40,7 +40,7 @@ class RotateMotion(py_trees.behaviour.Behaviour):
         direction_sign = self._blackboard.get(BlackboardDataKey.ROTATE_DIRECTION_SIGN)
 
         if target_angle is None or start_yaw is None or direction_sign is None:
-            self.logger.warn("Rotate goal not configured on blackboard")
+            self.logger.error("Rotate goal not configured on blackboard")
             return Status.FAILURE
 
         orientation = self._blackboard.get(BlackboardDataKey.ROBOT_ORIENTATION)

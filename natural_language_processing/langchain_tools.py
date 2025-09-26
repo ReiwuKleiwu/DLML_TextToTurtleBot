@@ -1,10 +1,9 @@
 from __future__ import annotations
 
 import json
-from typing import Literal, Optional
+from typing import Any, Dict, Optional
 
 from langchain.tools import tool
-from pydantic import BaseModel, Field, confloat
 
 from blackboard.blackboard import Blackboard
 from blackboard.interfaces.blackboard_data_keys import BlackboardDataKey
@@ -16,66 +15,77 @@ _blackboard = Blackboard()
 _event_bus = EventBus()
 
 
-class DriveCommandInput(BaseModel):
-    distance_m: confloat(gt=0.0) = Field(
-        ...,
-        description="Positive distance in meters to drive.",
-    )
-    direction: Literal["forward", "backward"] = Field(
-        "forward",
-        description="Direction of travel relative to the robot's frame.",
-    )
-
-
-@tool(name="queue_drive_command", args_schema=DriveCommandInput)
-def queue_drive_command(params: DriveCommandInput) -> str:
+@tool("queue_drive_command")
+def queue_drive_command(distance_m: Any, direction: str = "forward") -> str:
     """Queue a drive command for execution by the behaviour tree."""
 
-    command = UserCommand.drive(distance_m=params.distance_m, direction=params.direction)
+    try:
+        distance_val = float(distance_m)
+    except (TypeError, ValueError):
+        return "Failed to queue drive command: distance_m must be a number."
+
+    if distance_val <= 0.0:
+        return "Failed to queue drive command: distance_m must be > 0."
+
+    direction_norm = str(direction).lower()
+    if direction_norm not in {"forward", "backward"}:
+        return "Failed to queue drive command: direction must be 'forward' or 'backward'."
+
+    command = UserCommand.drive(distance_m=distance_val, direction=direction_norm)
     _event_bus.publish(DomainEvent(EventType.COMMAND_RECEIVED, command))
     return (
         "Queued drive command"
-        f" {command.command_id} for {params.distance_m:.2f} m {params.direction}."
+        f" {command.command_id} for {distance_val:.2f} m {direction_norm}."
     )
 
 
-class RotateCommandInput(BaseModel):
-    angle_deg: confloat(gt=0.0, le=360.0) = Field(
-        ...,
-        description="Positive rotation magnitude in degrees (0-360].",
-    )
-    direction: Literal["left", "right"] = Field(
-        ...,
-        description="Rotation direction around the vertical axis.",
-    )
-
-
-@tool(name="queue_rotate_command", args_schema=RotateCommandInput)
-def queue_rotate_command(params: RotateCommandInput) -> str:
+@tool("queue_rotate_command")
+def queue_rotate_command(angle_deg: Any, direction: str = "left") -> str:
     """Queue a rotate command for the behaviour tree."""
 
-    command = UserCommand.rotate(angle_deg=params.angle_deg, direction=params.direction)
+    try:
+        angle_val = float(angle_deg)
+    except (TypeError, ValueError):
+        return "Failed to queue rotate command: angle_deg must be a number."
+
+    if angle_val <= 0.0 or angle_val > 360.0:
+        return "Failed to queue rotate command: angle_deg must be in (0, 360]."
+
+    direction_norm = str(direction).lower()
+    if direction_norm not in {"left", "right"}:
+        return "Failed to queue rotate command: direction must be 'left' or 'right'."
+
+    command = UserCommand.rotate(angle_deg=angle_val, direction=direction_norm)
     _event_bus.publish(DomainEvent(EventType.COMMAND_RECEIVED, command))
     return (
         "Queued rotate command"
-        f" {command.command_id} for {params.angle_deg:.1f}° {params.direction}."
+        f" {command.command_id} for {angle_val:.1f}° {direction_norm}."
     )
 
 
-class NavigateCommandInput(BaseModel):
-    x: float = Field(..., description="Target x-coordinate in meters.")
-    y: float = Field(..., description="Target y-coordinate in meters.")
-    theta: Optional[float] = Field(
-        None,
-        description="Optional heading in radians relative to the map frame.",
-    )
-
-
-@tool(name="queue_navigate_command", args_schema=NavigateCommandInput)
-def queue_navigate_command(params: NavigateCommandInput) -> str:
+@tool("queue_navigate_command")
+def queue_navigate_command(x: Any, y: Any, theta: Optional[Any] = None) -> str:
     """Queue a navigate-to-pose command for the behaviour tree."""
 
-    command = UserCommand.navigate(x=params.x, y=params.y, theta=params.theta)
+    def _coerce_float(value: Any, name: str) -> Optional[float]:
+        if value is None:
+            return None
+        try:
+            return float(value)
+        except (TypeError, ValueError):
+            raise ValueError(f"{name} must be a number.")
+
+    try:
+        x_val = _coerce_float(x, "x")
+        y_val = _coerce_float(y, "y")
+        theta_val = _coerce_float(theta, "theta")
+    except ValueError as exc:
+        return f"Failed to queue navigate command: {exc}"
+
+    if x_val is None or y_val is None:
+        return "Failed to queue navigate command: x and y are required."
+
+    command = UserCommand.navigate(x=x_val, y=y_val, theta=theta_val)
     _event_bus.publish(DomainEvent(EventType.COMMAND_RECEIVED, command))
     pose = command.parameters.get("pose", {})
     theta_text = f", theta={pose.get('theta'):.2f}" if "theta" in pose else ""
@@ -85,31 +95,29 @@ def queue_navigate_command(params: NavigateCommandInput) -> str:
     )
 
 
-class FindObjectCommandInput(BaseModel):
-    object_class: str = Field(..., min_length=1, description="Object class to search for.")
-
-
-@tool(name="queue_find_object_command", args_schema=FindObjectCommandInput)
-def queue_find_object_command(params: FindObjectCommandInput) -> str:
+@tool("queue_find_object_command")
+def queue_find_object_command(object_class: Any) -> str:
     """Queue a find-object command for the behaviour tree."""
 
-    command = UserCommand.find_object(object_class=params.object_class)
+    label = str(object_class).strip()
+    if not label:
+        return "Failed to queue find-object command: object_class must be provided."
+
+    command = UserCommand.find_object(object_class=label)
     _event_bus.publish(DomainEvent(EventType.COMMAND_RECEIVED, command))
     return (
         "Queued find-object command"
-        f" {command.command_id} for class '{params.object_class}'."
+        f" {command.command_id} for class '{label}'."
     )
 
 
-class ClearCommandQueueInput(BaseModel):
-    confirm: bool = Field(..., description="Set to true to clear all pending and active commands.")
-
-
-@tool(name="clear_command_queue", args_schema=ClearCommandQueueInput)
-def clear_command_queue(params: ClearCommandQueueInput) -> str:
+@tool("clear_command_queue")
+def clear_command_queue(confirm: Any = False) -> str:
     """Clear all pending commands and cancel the active command if present."""
 
-    if not params.confirm:
+    confirm_flag = str(confirm).lower() in {"true", "1", "yes"}
+
+    if not confirm_flag:
         return "Queue clear aborted; confirmation flag not set."
 
     pending = _blackboard.get(BlackboardDataKey.COMMAND_QUEUE, []) or []
@@ -118,63 +126,69 @@ def clear_command_queue(params: ClearCommandQueueInput) -> str:
     return f"Cleared {count} queued commands and stopped any active command."
 
 
-class CommandOverviewInput(BaseModel):
-    """No parameters required."""
-
-
-@tool(name="get_command_overview", args_schema=CommandOverviewInput)
-def get_command_overview(_: CommandOverviewInput) -> str:
+@tool("get_command_overview")
+def get_command_overview() -> str:
     """Return summaries of the active command and pending queue."""
 
     snapshot = _blackboard.snapshot_command_state()
     return json.dumps(snapshot)
 
 
-class NavigationStatusInput(BaseModel):
-    """No parameters required."""
-
-
-@tool(name="get_navigation_status", args_schema=NavigationStatusInput)
-def get_navigation_status(_: NavigationStatusInput) -> str:
+@tool("get_navigation_status")
+def get_navigation_status() -> str:
     """Return the current navigation goal and status information."""
 
     snapshot = _blackboard.snapshot_navigation_status()
     return json.dumps(snapshot)
 
 
-class MotionStatusInput(BaseModel):
-    """No parameters required."""
-
-
-@tool(name="get_motion_status", args_schema=MotionStatusInput)
-def get_motion_status(_: MotionStatusInput) -> str:
+@tool("get_motion_status")
+def get_motion_status() -> str:
     """Return drive and rotate progress measurements."""
 
     snapshot = _blackboard.snapshot_motion_status()
     return json.dumps(snapshot)
 
 
-class RobotMapInput(BaseModel):
-    """No parameters required."""
-
-
-@tool(name="get_robot_map", args_schema=RobotMapInput)
-def get_robot_map(_: RobotMapInput) -> str:
+@tool("get_robot_map")
+def get_robot_map() -> str:
     """Return the persistent tracked objects detected in the environment."""
 
     snapshot = _blackboard.snapshot_robot_map()
     return json.dumps(snapshot)
 
 
-class BehaviourTreePauseInput(BaseModel):
-    paused: bool = Field(..., description="True pauses ticking; false resumes execution.")
+@tool("get_robot_pose")
+def get_robot_pose() -> str:
+    """Return the robot's current position and orientation if available."""
+
+    position = _blackboard.get(BlackboardDataKey.ROBOT_POSITION)
+    orientation = _blackboard.get(BlackboardDataKey.ROBOT_ORIENTATION)
+
+    def _serialize_message(msg: Any) -> Dict[str, Any]:
+        if msg is None:
+            return {}
+        return {
+            "x": getattr(msg, "x", None),
+            "y": getattr(msg, "y", None),
+            "z": getattr(msg, "z", None),
+            "w": getattr(msg, "w", None),
+        }
+
+    payload = {
+        "position": _serialize_message(position),
+        "orientation": _serialize_message(orientation),
+    }
+    return json.dumps(payload)
 
 
-@tool(name="set_behaviour_tree_pause", args_schema=BehaviourTreePauseInput)
-def set_behaviour_tree_pause(params: BehaviourTreePauseInput) -> str:
+@tool("set_behaviour_tree_pause")
+def set_behaviour_tree_pause(paused: Any) -> str:
     """Pause or resume the behaviour tree ticking loop."""
 
-    if params.paused:
+    paused_flag = str(paused).lower() in {"true", "1", "yes"}
+
+    if paused_flag:
         _blackboard.pause_behaviour_tree()
         state = "paused"
     else:
@@ -188,6 +202,7 @@ LANGCHAIN_TOOLS = [
     get_navigation_status,
     get_motion_status,
     get_robot_map,
+    get_robot_pose,
     queue_drive_command,
     queue_rotate_command,
     queue_navigate_command,
