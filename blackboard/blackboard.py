@@ -1,13 +1,13 @@
 # Singleton Blackboard for sharing data across the behavior tree
 from collections import deque
 from typing import Deque, Optional
+from threading import Timer
 
 from utils.singleton_meta import SingletonMeta
 from events.event_bus import EventBus
 from events.interfaces.events import DomainEvent, EventType
 from blackboard.interfaces.blackboard_data_keys import BlackboardDataKey
 from commands.user_command import UserCommand
-
 
 # The blackboard acts as a central hub for all the information the robot perceives
 class Blackboard(metaclass=SingletonMeta):
@@ -61,7 +61,7 @@ class Blackboard(metaclass=SingletonMeta):
         self._set(BlackboardDataKey.NAVIGATION_STATUS, None)
         self._set(BlackboardDataKey.NAVIGATION_FEEDBACK, None)
 
-        self._seed_rectangle_commands()
+        self._seed_test_commands()
 
     # The blackboard is readonly from the outside!
     def _set(self, key, value):
@@ -71,6 +71,13 @@ class Blackboard(metaclass=SingletonMeta):
         return self.data.get(key, default)
     
     # Command handling
+
+    def _seed_test_commands(self) -> None:
+        DriveCommand = UserCommand.drive(1.0, None)
+        TurnCommand = UserCommand.rotate(90.0, 'right')
+
+        self.enqueue_command(DriveCommand)
+        self.enqueue_command(TurnCommand)
 
     def enqueue_command(self, command: UserCommand) -> None:
         """Push a user command to the queue and mirror the state on the blackboard."""
@@ -90,43 +97,33 @@ class Blackboard(metaclass=SingletonMeta):
         return self._command_queue[0] if self._command_queue else None
 
     def clear_commands(self) -> None:
-        """Remove all pending commands."""
+        """Remove all pending commands and cancel any active one."""
+        # Drop any queued commands and mirror the empty queue on the blackboard.
         self._command_queue.clear()
         self._sync_command_queue()
+
+        # Cancel the active command (if any) to release related state.
+        self.cancel_active_command()
+
+    def cancel_active_command(self) -> Optional[UserCommand]:
+        """Cancel the currently active command, removing it from the queue if present."""
+        active_command: Optional[UserCommand] = self.get(BlackboardDataKey.ACTIVE_COMMAND)
+
+        if not isinstance(active_command, UserCommand):
+            return None
+        
+        print(f"Cancelling active command: {active_command.command_id}")
+
+        # This should theoretically never happen, but just in case
+        self._remove_command_by_id(active_command.command_id)
+
+        self.set_active_command(None)
+        active_command.cleanup()
+        return active_command
 
     def set_active_command(self, command: Optional[UserCommand]) -> None:
         """Update the currently executing command."""
         self._set(BlackboardDataKey.ACTIVE_COMMAND, command)
-
-    def set_drive_goal(self, *, target_distance: float, start_pose: dict, direction_sign: int) -> None:
-        self._set(BlackboardDataKey.DRIVE_TARGET_DISTANCE, target_distance)
-        self._set(BlackboardDataKey.DRIVE_START_POSE, start_pose)
-        self._set(BlackboardDataKey.DRIVE_DIRECTION_SIGN, direction_sign)
-        self._set(BlackboardDataKey.DRIVE_DISTANCE_TRAVELLED, 0.0)
-
-    def update_drive_distance(self, distance: float) -> None:
-        self._set(BlackboardDataKey.DRIVE_DISTANCE_TRAVELLED, distance)
-
-    def clear_drive_goal(self) -> None:
-        self._set(BlackboardDataKey.DRIVE_TARGET_DISTANCE, None)
-        self._set(BlackboardDataKey.DRIVE_START_POSE, None)
-        self._set(BlackboardDataKey.DRIVE_DIRECTION_SIGN, None)
-        self._set(BlackboardDataKey.DRIVE_DISTANCE_TRAVELLED, 0.0)
-
-    def set_rotate_goal(self, *, target_angle: float, start_yaw: float, direction_sign: int) -> None:
-        self._set(BlackboardDataKey.ROTATE_TARGET_ANGLE, target_angle)
-        self._set(BlackboardDataKey.ROTATE_START_YAW, start_yaw)
-        self._set(BlackboardDataKey.ROTATE_DIRECTION_SIGN, direction_sign)
-        self._set(BlackboardDataKey.ROTATE_ANGLE_TRAVELLED, 0.0)
-
-    def update_rotate_angle(self, angle: float) -> None:
-        self._set(BlackboardDataKey.ROTATE_ANGLE_TRAVELLED, angle)
-
-    def clear_rotate_goal(self) -> None:
-        self._set(BlackboardDataKey.ROTATE_TARGET_ANGLE, None)
-        self._set(BlackboardDataKey.ROTATE_START_YAW, None)
-        self._set(BlackboardDataKey.ROTATE_DIRECTION_SIGN, None)
-        self._set(BlackboardDataKey.ROTATE_ANGLE_TRAVELLED, 0.0)
 
     def _sync_command_queue(self) -> None:
         """Expose a snapshot of the command queue via the blackboard data store."""
@@ -143,25 +140,6 @@ class Blackboard(metaclass=SingletonMeta):
                 self._sync_command_queue()
                 return command
         return None
-
-    def _seed_rectangle_commands(self) -> None:
-        """Seed the queue with commands to drive a 1m x 1m rectangle."""
-        sequence = [
-            UserCommand.navigate(x=1.0, y=1.0, theta=0.0),
-            UserCommand.drive(distance_m=0.3, direction="forward"),
-            UserCommand.rotate(angle_deg=90.0, direction="left"),
-            UserCommand.drive(distance_m=0.3, direction="forward"),
-            UserCommand.rotate(angle_deg=90.0, direction="left"),
-            UserCommand.navigate(x=2.0, y=2.0, theta=0.0),
-            UserCommand.drive(distance_m=0.3, direction="forward"),
-            UserCommand.rotate(angle_deg=90.0, direction="left"),
-            UserCommand.drive(distance_m=0.3, direction="forward"),
-            UserCommand.rotate(angle_deg=90.0, direction="left"),
-            UserCommand.navigate(x=1.0, y=1.0, theta=0.0),
-        ]
-
-        for command in sequence:
-            self.enqueue_command(command)
     
     ### Event Handlers ###
 
@@ -170,6 +148,8 @@ class Blackboard(metaclass=SingletonMeta):
         command = event.data
         if not isinstance(command, UserCommand):
             return
+
+        print(f"Command started: {command.command_id}")
 
         # Remove from pending queue if it was still there and mark active
         self._remove_command_by_id(command.command_id)
@@ -182,6 +162,8 @@ class Blackboard(metaclass=SingletonMeta):
 
         if not isinstance(command, UserCommand):
             return
+        
+        print(f"Command completed: {command.command_id}")
 
         if active_command and active_command.command_id == command.command_id:
             command.cleanup()
@@ -195,10 +177,12 @@ class Blackboard(metaclass=SingletonMeta):
         if not isinstance(command, UserCommand):
             return
 
-        self._remove_command_by_id(command.command_id)
+        # This should theoretically never happen, but just in case
         if active_command and active_command.command_id == command.command_id:
-            self.set_active_command(None)
-        command.cleanup()
+            self.cancel_active_command()
+        else:
+            self._remove_command_by_id(command.command_id)
+            command.cleanup()
 
     def _on_command_received(self, event: DomainEvent):
         # data is of type UserCommand
@@ -217,22 +201,24 @@ class Blackboard(metaclass=SingletonMeta):
         if target_distance is None or start_pose is None or direction_sign is None:
             return
 
-        self.set_drive_goal(
-            target_distance=float(target_distance),
-            start_pose=start_pose,
-            direction_sign=int(direction_sign),
-        )
+        self._set(BlackboardDataKey.DRIVE_TARGET_DISTANCE, target_distance)
+        self._set(BlackboardDataKey.DRIVE_START_POSE, start_pose)
+        self._set(BlackboardDataKey.DRIVE_DIRECTION_SIGN, direction_sign)
+        self._set(BlackboardDataKey.DRIVE_DISTANCE_TRAVELLED, 0.0)
 
     def _on_drive_progress_updated(self, event: DomainEvent) -> None:
         # data is of type float (distance in meters)
         distance = event.data
         if distance is None:
             return
-        self.update_drive_distance(float(distance))
+        self._set(BlackboardDataKey.DRIVE_DISTANCE_TRAVELLED, distance)
 
     def _on_drive_goal_cleared(self, event: DomainEvent) -> None:
         # data is None
-        self.clear_drive_goal()
+        self._set(BlackboardDataKey.DRIVE_TARGET_DISTANCE, None)
+        self._set(BlackboardDataKey.DRIVE_START_POSE, None)
+        self._set(BlackboardDataKey.DRIVE_DIRECTION_SIGN, None)
+        self._set(BlackboardDataKey.DRIVE_DISTANCE_TRAVELLED, 0.0)
 
     def _on_rotate_goal_set(self, event: DomainEvent) -> None:
         # data is of type Dict[str, Any] with keys target_angle, start_yaw, direction_sign
@@ -244,22 +230,24 @@ class Blackboard(metaclass=SingletonMeta):
         if target_angle is None or start_yaw is None or direction_sign is None:
             return
 
-        self.set_rotate_goal(
-            target_angle=float(target_angle),
-            start_yaw=float(start_yaw),
-            direction_sign=int(direction_sign),
-        )
+        self._set(BlackboardDataKey.ROTATE_TARGET_ANGLE, target_angle)
+        self._set(BlackboardDataKey.ROTATE_START_YAW, start_yaw)
+        self._set(BlackboardDataKey.ROTATE_DIRECTION_SIGN, direction_sign)
+        self._set(BlackboardDataKey.ROTATE_ANGLE_TRAVELLED, 0.0)
 
     def _on_rotate_progress_updated(self, event: DomainEvent) -> None:
         # data is of type float (angle in radians)
         angle = event.data
         if angle is None:
             return
-        self.update_rotate_angle(float(angle))
+        self._set(BlackboardDataKey.ROTATE_ANGLE_TRAVELLED, angle)
 
     def _on_rotate_goal_cleared(self, event: DomainEvent) -> None:
         # data is None
-        self.clear_rotate_goal()
+        self._set(BlackboardDataKey.ROTATE_TARGET_ANGLE, None)
+        self._set(BlackboardDataKey.ROTATE_START_YAW, None)
+        self._set(BlackboardDataKey.ROTATE_DIRECTION_SIGN, None)
+        self._set(BlackboardDataKey.ROTATE_ANGLE_TRAVELLED, 0.0)
 
     def _on_navigation_goal_sent(self, event: DomainEvent):
         # data is of type geometry_msgs.msg.PoseStamped

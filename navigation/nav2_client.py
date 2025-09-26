@@ -25,6 +25,7 @@ class Nav2Client:
         self._current_future: Optional[Future] = None
         self._goal_handle = None
         self._lock = threading.Lock()
+        self._event_bus.subscribe(EventType.NAVIGATION_CANCEL_REQUEST, self._on_cancel_request)
 
     def send_goal(self, pose: PoseStamped) -> bool:
         with self._lock:
@@ -109,3 +110,6 @@ class Nav2Client:
     def _on_feedback(self, feedback_msg) -> None:
         feedback = feedback_msg.feedback
         self._event_bus.publish(DomainEvent(EventType.NAVIGATION_FEEDBACK, feedback))
+
+    def _on_cancel_request(self, event: DomainEvent) -> None:
+        self.cancel_goal()

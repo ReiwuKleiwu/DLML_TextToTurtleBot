@@ -46,6 +46,7 @@ class EventType(str, Enum):
     NAVIGATION_GOAL_CANCELLED = "navigation-goal-cancelled"
     NAVIGATION_FEEDBACK = "navigation-feedback"
     NAVIGATION_GOAL_CLEARED = "navigation-goal-cleared"
+    NAVIGATION_CANCEL_REQUEST = "navigation-cancel-request"
 
 
 @dataclass(slots=True)

@@ -33,11 +33,16 @@ class PrepareDriveGoal(py_trees.behaviour.Behaviour):
         parameters = self._command.parameters
         distance = float(parameters.get("distance_m", 0.0))
         if distance <= 0.0:
-            self.logger.warn("Drive command missing positive distance")
+            self.logger.error("Drive command missing positive distance")
             return Status.FAILURE
 
-        direction = str(parameters.get("direction", "forward")).lower()
-        direction_sign = -1 if direction in ("backward", "backwards", "reverse", "back") else 1
+        direction = parameters.get("direction")
+        if direction is None:
+            self.logger.error("Drive command is missing direction")
+            return Status.FAILURE
+
+        direction_str = str(parameters.get("direction", "forward")).lower()
+        direction_sign = -1 if direction_str in ("backward", "backwards", "reverse", "back") else 1
 
         start_pose = {"x": position.x, "y": position.y}
         event_bus = EventBus()

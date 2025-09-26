@@ -54,9 +54,12 @@ class UserCommand:
         from events.event_bus import EventBus
         from events.interfaces.events import DomainEvent, EventType
 
+        bus = EventBus()
+
         if self.command_type == CommandType.DRIVE:
-            EventBus().publish(DomainEvent(EventType.DRIVE_GOAL_CLEARED, None))
+            bus.publish(DomainEvent(EventType.DRIVE_GOAL_CLEARED, None))
         elif self.command_type == CommandType.ROTATE:
-            EventBus().publish(DomainEvent(EventType.ROTATE_GOAL_CLEARED, None))
+            bus.publish(DomainEvent(EventType.ROTATE_GOAL_CLEARED, None))
         elif self.command_type == CommandType.NAVIGATE_TO_POSE:
-            EventBus().publish(DomainEvent(EventType.NAVIGATION_GOAL_CLEARED, None))
+            bus.publish(DomainEvent(EventType.NAVIGATION_CANCEL_REQUEST, None))
+            bus.publish(DomainEvent(EventType.NAVIGATION_GOAL_CLEARED, None))
