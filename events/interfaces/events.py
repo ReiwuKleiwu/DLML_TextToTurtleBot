@@ -13,9 +13,12 @@ class EventType(str, Enum):
     LIDAR_OBSTACLE_PRESENT = "lidar-obstacle-present"
     LIDAR_OBSTACLE_ABSENT = "lidar-no-obstacle-absent"
 
+    CAMERA_RESOLUTION_SET = "camera-resolution-set"
+
     OBJECTS_DETECTED = "objects-detected"
     OBJECT_WORLD_COORDINATES_UPDATED = "object-world-coordinates-updated"
 
+    TARGET_OBJECT_CLASS_SET = "target-object-class-set"
     TARGET_OBJECT_SELECTED = "target-object-selected"
     TARGET_REACHED = 'target-reached'
 

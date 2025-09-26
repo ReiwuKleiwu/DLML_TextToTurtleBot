@@ -63,3 +63,9 @@ class UserCommand:
         elif self.command_type == CommandType.NAVIGATE_TO_POSE:
             bus.publish(DomainEvent(EventType.NAVIGATION_CANCEL_REQUEST, None))
             bus.publish(DomainEvent(EventType.NAVIGATION_GOAL_CLEARED, None))
+        elif self.command_type == CommandType.FIND_OBJECT:
+            bus.publish(DomainEvent(EventType.TARGET_OBJECT_CLASS_SET, None))
+            bus.publish(DomainEvent(EventType.TARGET_OBJECT_SELECTED, None))
+            bus.publish(DomainEvent(EventType.TARGET_REACHED, False))
+            bus.publish(DomainEvent(EventType.NAVIGATION_CANCEL_REQUEST, None))
+            bus.publish(DomainEvent(EventType.NAVIGATION_GOAL_CLEARED, None))

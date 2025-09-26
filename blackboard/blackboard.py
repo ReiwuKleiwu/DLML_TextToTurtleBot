@@ -45,8 +45,10 @@ class Blackboard(metaclass=SingletonMeta):
         self._event_bus.subscribe(EventType.NAVIGATION_GOAL_CANCELLED, self._on_navigation_goal_cancelled)
         self._event_bus.subscribe(EventType.NAVIGATION_FEEDBACK, self._on_navigation_feedback)
         self._event_bus.subscribe(EventType.NAVIGATION_GOAL_CLEARED, self._on_navigation_goal_cleared)
+        self._event_bus.subscribe(EventType.TARGET_OBJECT_CLASS_SET, self._on_target_object_class_set)
+        self._event_bus.subscribe(EventType.CAMERA_RESOLUTION_SET, self._on_camera_resolution_set)
 
-        self._set(BlackboardDataKey.TARGET_OBJECT_CLASS, 'chair')
+        self._set(BlackboardDataKey.TARGET_OBJECT_CLASS, None)
         self._set(BlackboardDataKey.COMMAND_QUEUE, [])
         self._set(BlackboardDataKey.ACTIVE_COMMAND, None)
         self._set(BlackboardDataKey.DRIVE_TARGET_DISTANCE, None)
@@ -73,11 +75,20 @@ class Blackboard(metaclass=SingletonMeta):
     # Command handling
 
     def _seed_test_commands(self) -> None:
-        DriveCommand = UserCommand.drive(1.0, None)
-        TurnCommand = UserCommand.rotate(90.0, 'right')
 
-        self.enqueue_command(DriveCommand)
-        self.enqueue_command(TurnCommand)
+        # nav_command = UserCommand.navigate(1.0, 1.0)
+        # rotate_command = UserCommand.rotate(90, 'left')
+        # drive_command = UserCommand.drive(1.0, 'forward')
+        # nav_command_2 = UserCommand.navigate(10.0, -4.0)
+        find_chair = UserCommand.find_object('chair')
+        navigate_to_point = UserCommand.navigate(1.0, 1.0)
+        find_person = UserCommand.find_object('person')
+
+        commands = [find_chair, navigate_to_point, find_person, find_chair]
+
+        for command in commands:
+            self.enqueue_command(command)
+
 
     def enqueue_command(self, command: UserCommand) -> None:
         """Push a user command to the queue and mirror the state on the blackboard."""
@@ -290,6 +301,10 @@ class Blackboard(metaclass=SingletonMeta):
         self._set(BlackboardDataKey.NAVIGATION_STATUS, None)
         self._set(BlackboardDataKey.NAVIGATION_FEEDBACK, None)
 
+    def _on_target_object_class_set(self, event: DomainEvent):
+        # data is of type str or None
+        self._set(BlackboardDataKey.TARGET_OBJECT_CLASS, event.data)
+
     def _on_lidar_obstacle_present(self, event: DomainEvent):
         self._set(BlackboardDataKey.LIDAR_OBSTACLE_PRESENT, True)
 
@@ -328,3 +343,8 @@ class Blackboard(metaclass=SingletonMeta):
         # data is None
         self._set(BlackboardDataKey.SELECTED_TARGET_OBJECT, None)
         self._set(BlackboardDataKey.TARGET_OBJECT_CLASS, None)
+        self._event_bus.publish(DomainEvent(EventType.NAVIGATION_CANCEL_REQUEST, None))
+
+    def _on_camera_resolution_set(self, event: DomainEvent):
+        # data is of type Dict with keys 'width' and 'height'
+        self._set(BlackboardDataKey.CAMERA_RESOLUTION, event.data)

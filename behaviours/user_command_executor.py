@@ -9,6 +9,7 @@ from commands.user_command import CommandType, UserCommand
 from behaviours.skills.drive.drive_skill import DriveSkill
 from behaviours.skills.rotate.rotate_skill import RotateSkill
 from behaviours.skills.navigate.navigate_skill import NavigateSkill
+from behaviours.skills.find_object.find_object_skill import FindObjectSkill
 from navigation.nav2_client import Nav2Client
 from rclpy.node import Node
 from events.event_bus import EventBus
@@ -116,6 +117,17 @@ class UserCommandExecutor(py_trees.behaviour.Behaviour):
                     command,
                     self._node,
                     self._nav_client,
+                )
+        elif next_command.command_type == CommandType.FIND_OBJECT:
+            command = self._blackboard.pop_command()
+            if command is not None:
+                skill = FindObjectSkill(
+                    f"FindObjectSkill-{command.command_id[:8]}",
+                    command,
+                    self._node,
+                    self._nav_client,
+                    self._twist,
+                    self._publisher,
                 )
         else:
             self.logger.warn(f"Unsupported command type: {next_command.command_type}")

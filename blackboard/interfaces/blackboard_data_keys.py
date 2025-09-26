@@ -4,6 +4,8 @@ from enum import Enum
 class BlackboardDataKey(str, Enum):
     LIDAR_OBSTACLE_PRESENT = "lidar-obstacle-present"
 
+    CAMERA_RESOLUTION = 'camera-resolution'
+
     DETECTED_OBJECTS = 'detected-objects'
     DETECTED_OBJECTS_WITH_COORDINATES = 'detected-objects-with-coordinates'
     TARGET_OBJECT_CLASS = 'target-object-class'

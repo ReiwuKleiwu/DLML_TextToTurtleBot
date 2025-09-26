@@ -22,7 +22,15 @@ class CameraProcessor:
     
     def handle(self, msg) -> None:
         cv_image = self._bridge.imgmsg_to_cv2(msg, desired_encoding='bgr8')
-        # camera_height, camera_width = cv_image.shape[:2]
+        camera_height, camera_width = cv_image.shape[:2]
+
+        camera_resolution = self._blackboard.get(BlackboardDataKey.CAMERA_RESOLUTION)
+        if not camera_resolution: 
+            camera_resolution = {
+                'width': camera_width,
+                'height': camera_height
+            }
+            self._event_bus.publish(DomainEvent(EventType.CAMERA_RESOLUTION_SET, camera_resolution))
         
         self._object_detector.detect(cv_image)
 
