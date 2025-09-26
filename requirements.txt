@@ -2,3 +2,5 @@ numpy
 py_trees
 rclpy
 ultralytics
+langchain
+pydantic

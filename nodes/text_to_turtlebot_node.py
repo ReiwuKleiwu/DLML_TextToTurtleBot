@@ -138,6 +138,11 @@ class TextToTurtlebotNode(Node):
 
     def _run_tree_loop(self) -> None:
         while not self._shutdown_event.is_set():
+            if self._blackboard.is_behaviour_tree_paused():
+                # Sleep in short intervals so resume responds quickly.
+                self._shutdown_event.wait(timeout=self._tick_period)
+                continue
+
             start = time.perf_counter()
             self.tick()
 

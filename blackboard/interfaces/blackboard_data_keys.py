@@ -33,3 +33,5 @@ class BlackboardDataKey(str, Enum):
     NAVIGATION_CURRENT_GOAL = 'navigation-current-goal'
     NAVIGATION_STATUS = 'navigation-status'
     NAVIGATION_FEEDBACK = 'navigation-feedback'
+
+    BEHAVIOUR_TREE_PAUSED = 'behaviour-tree-paused'

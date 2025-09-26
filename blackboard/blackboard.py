@@ -1,6 +1,6 @@
 # Singleton Blackboard for sharing data across the behavior tree
 from collections import deque
-from typing import Deque, Optional
+from typing import Any, Deque, Dict, List, Optional
 from threading import RLock, Timer
 
 from utils.singleton_meta import SingletonMeta
@@ -17,7 +17,7 @@ class Blackboard(metaclass=SingletonMeta):
 
         # Internal command queue storage (FIFO)
         self._command_queue: Deque[UserCommand] = deque()
-        self._command_lock = RLock()
+        self._lock = RLock()
 
         self._event_bus.subscribe(EventType.LIDAR_OBSTACLE_PRESENT, self._on_lidar_obstacle_present)
         self._event_bus.subscribe(EventType.LIDAR_OBSTACLE_ABSENT, self._on_lidar_obstacle_absent)
@@ -63,6 +63,7 @@ class Blackboard(metaclass=SingletonMeta):
         self._set(BlackboardDataKey.NAVIGATION_CURRENT_GOAL, None)
         self._set(BlackboardDataKey.NAVIGATION_STATUS, None)
         self._set(BlackboardDataKey.NAVIGATION_FEEDBACK, None)
+        self._set(BlackboardDataKey.BEHAVIOUR_TREE_PAUSED, False)
 
         self._seed_test_commands()
 
@@ -72,7 +73,24 @@ class Blackboard(metaclass=SingletonMeta):
 
     def get(self, key, default=None):
         return self.data.get(key, default)
-    
+
+    # Behaviour tree control
+
+    def pause_behaviour_tree(self) -> None:
+        """Flag the behaviour tree loop as paused."""
+        with self._lock:
+            self._set(BlackboardDataKey.BEHAVIOUR_TREE_PAUSED, True)
+
+    def resume_behaviour_tree(self) -> None:
+        """Flag the behaviour tree loop as running."""
+        with self._lock:
+            self._set(BlackboardDataKey.BEHAVIOUR_TREE_PAUSED, False)
+
+    def is_behaviour_tree_paused(self) -> bool:
+        """Return whether the behaviour tree should halt ticking."""
+        with self._lock:
+            return bool(self.get(BlackboardDataKey.BEHAVIOUR_TREE_PAUSED, False))
+
     # Command handling
 
     def _seed_test_commands(self) -> None:
@@ -105,13 +123,13 @@ class Blackboard(metaclass=SingletonMeta):
 
     def enqueue_command(self, command: UserCommand) -> None:
         """Push a user command to the queue and mirror the state on the blackboard."""
-        with self._command_lock:
+        with self._lock:
             self._command_queue.append(command)
             self._sync_command_queue()
 
     def pop_command(self) -> Optional[UserCommand]:
         """Remove and return the next command, updating the published queue state."""
-        with self._command_lock:
+        with self._lock:
             if not self._command_queue:
                 return None
             command = self._command_queue.popleft()
@@ -120,13 +138,13 @@ class Blackboard(metaclass=SingletonMeta):
 
     def peek_command(self) -> Optional[UserCommand]:
         """Return, without removing, the next command in the queue."""
-        with self._command_lock:
+        with self._lock:
             return self._command_queue[0] if self._command_queue else None
 
     def clear_commands(self) -> None:
         """Remove all pending commands and cancel any active one."""
         # Drop any queued commands and mirror the empty queue on the blackboard.
-        with self._command_lock:
+        with self._lock:
             self._command_queue.clear()
             self._sync_command_queue()
 
@@ -135,7 +153,7 @@ class Blackboard(metaclass=SingletonMeta):
 
     def cancel_active_command(self) -> Optional[UserCommand]:
         """Cancel the currently active command, removing it from the queue if present."""
-        with self._command_lock:
+        with self._lock:
             active_command: Optional[UserCommand] = self.get(BlackboardDataKey.ACTIVE_COMMAND)
 
             if not isinstance(active_command, UserCommand):
@@ -153,17 +171,17 @@ class Blackboard(metaclass=SingletonMeta):
 
     def set_active_command(self, command: Optional[UserCommand]) -> None:
         """Update the currently executing command."""
-        with self._command_lock:
+        with self._lock:
             self._set(BlackboardDataKey.ACTIVE_COMMAND, command)
 
     def _sync_command_queue(self) -> None:
         """Expose a snapshot of the command queue via the blackboard data store."""
-        with self._command_lock:
+        with self._lock:
             self._set(BlackboardDataKey.COMMAND_QUEUE, list(self._command_queue))
 
     def _remove_command_by_id(self, command_id: str) -> Optional[UserCommand]:
         """Remove a queued command by identifier and return it if present."""
-        with self._command_lock:
+        with self._lock:
             if not self._command_queue:
                 return None
 
@@ -370,3 +388,140 @@ class Blackboard(metaclass=SingletonMeta):
     def _on_camera_resolution_set(self, event: DomainEvent):
         # data is of type Dict with keys 'width' and 'height'
         self._set(BlackboardDataKey.CAMERA_RESOLUTION, event.data)
+
+    # Snapshot helpers for LLM tools
+
+    def snapshot_command_state(self) -> Dict[str, Any]:
+        """Return summaries of active and pending commands."""
+        with self._lock:
+            pending = [self._summarize_command(cmd) for cmd in list(self._command_queue)]
+            active = self.data.get(BlackboardDataKey.ACTIVE_COMMAND)
+            active_summary = (
+                self._summarize_command(active)
+                if isinstance(active, UserCommand)
+                else None
+            )
+
+        return {
+            "pending_count": len(pending),
+            "pending_commands": pending,
+            "active_command": active_summary,
+        }
+
+    def snapshot_navigation_status(self) -> Dict[str, Any]:
+        """Return the latest navigation goal and status information."""
+        with self._lock:
+            status = self.data.get(BlackboardDataKey.NAVIGATION_STATUS)
+            goal = self.data.get(BlackboardDataKey.NAVIGATION_CURRENT_GOAL)
+            feedback = self.data.get(BlackboardDataKey.NAVIGATION_FEEDBACK)
+
+        return {
+            "status": status,
+            "goal": self._format_pose(goal),
+            "feedback": self._serialize_value(feedback),
+        }
+
+    def snapshot_motion_status(self) -> Dict[str, Any]:
+        """Return drive and rotate progress snapshots."""
+        with self._lock:
+            drive = {
+                "target_distance_m": self.data.get(BlackboardDataKey.DRIVE_TARGET_DISTANCE),
+                "distance_travelled_m": self.data.get(BlackboardDataKey.DRIVE_DISTANCE_TRAVELLED),
+                "direction_sign": self.data.get(BlackboardDataKey.DRIVE_DIRECTION_SIGN),
+                "start_pose": self.data.get(BlackboardDataKey.DRIVE_START_POSE),
+            }
+            rotate = {
+                "target_angle_rad": self.data.get(BlackboardDataKey.ROTATE_TARGET_ANGLE),
+                "angle_travelled_rad": self.data.get(BlackboardDataKey.ROTATE_ANGLE_TRAVELLED),
+                "direction_sign": self.data.get(BlackboardDataKey.ROTATE_DIRECTION_SIGN),
+                "start_yaw": self.data.get(BlackboardDataKey.ROTATE_START_YAW),
+            }
+
+        return {
+            "drive": self._serialize_mapping(drive),
+            "rotate": self._serialize_mapping(rotate),
+        }
+
+    def snapshot_robot_map(self) -> Dict[str, Any]:
+        """Return a summary of persistent tracked objects."""
+        with self._lock:
+            persistent_objects: List[Any] = (
+                self.data.get(BlackboardDataKey.ROBOT_MAP) or []
+            )
+
+        return {
+            "persistent_object_count": len(persistent_objects),
+            "persistent_objects": [
+                self._summarize_tracked_object(obj) for obj in persistent_objects
+            ],
+        }
+
+    @staticmethod
+    def _summarize_command(command: UserCommand) -> Dict[str, Any]:
+        return {
+            "command_id": command.command_id,
+            "command_type": command.command_type.name.lower(),
+            "parameters": command.parameters,
+            "timestamp": command.timestamp,
+        }
+
+    @classmethod
+    def _serialize_mapping(cls, mapping: Dict[str, Any]) -> Dict[str, Any]:
+        return {key: cls._serialize_value(value) for key, value in mapping.items()}
+
+    @staticmethod
+    def _serialize_value(value: Any) -> Any:
+        if isinstance(value, (str, int, float, bool)) or value is None:
+            return value
+        if isinstance(value, dict):
+            return {key: Blackboard._serialize_value(val) for key, val in value.items()}
+        if isinstance(value, (list, tuple)):
+            return [Blackboard._serialize_value(item) for item in value]
+        return str(value)
+
+    @classmethod
+    def _summarize_tracked_object(cls, tracked_object: Any) -> Dict[str, Any]:
+        detected = getattr(tracked_object, "detected_object", None)
+        detected_summary = None
+        if detected is not None:
+            detected_summary = {
+                "class_name": getattr(detected, "name", None),
+                "confidence": getattr(detected, "confidence", None),
+                "world_coordinates": {
+                    "x": getattr(detected, "world_x", None),
+                    "y": getattr(detected, "world_y", None),
+                    "z": getattr(detected, "world_z", None),
+                },
+            }
+
+        return {
+            "detected_object": detected_summary or cls._serialize_value(detected),
+            "total_detections": getattr(tracked_object, "total_detections", None),
+            "first_seen_timestamp": getattr(tracked_object, "first_seen_timestamp", None),
+            "last_seen_timestamp": getattr(tracked_object, "last_seen_timestamp", None),
+        }
+
+    @staticmethod
+    def _format_pose(goal: Any) -> Any:
+        if goal is None:
+            return None
+        try:
+            pose = goal.pose
+            position = pose.position
+            orientation = pose.orientation
+            return {
+                "position": {
+                    "x": getattr(position, "x", None),
+                    "y": getattr(position, "y", None),
+                    "z": getattr(position, "z", None),
+                },
+                "orientation": {
+                    "x": getattr(orientation, "x", None),
+                    "y": getattr(orientation, "y", None),
+                    "z": getattr(orientation, "z", None),
+                    "w": getattr(orientation, "w", None),
+                },
+                "frame_id": getattr(goal.header, "frame_id", None),
+            }
+        except AttributeError:
+            return Blackboard._serialize_value(goal)
