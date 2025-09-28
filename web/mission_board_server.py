@@ -47,6 +47,7 @@ class MissionBoardServer:
                 host=self._host,
                 port=self._port,
                 log_level="info",
+                access_log=False,  # Suppress per-request access logs; the UI polls frequently.
             )
             self._server = uvicorn.Server(config)
 

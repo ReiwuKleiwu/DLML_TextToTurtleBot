@@ -5,5 +5,7 @@ ultralytics
 langchain
 pydantic
 langchain-google-genai
+langchain-ollama
+langchain-openai
 fastapi
 uvicorn

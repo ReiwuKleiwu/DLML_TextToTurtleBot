@@ -169,9 +169,9 @@ export function createMapController({ canvas, statusCursorEl, resetButton }) {
     }
 
     trailSamples = [...trailSamples, { x: point.x, y: point.y, time: nowMs }];
-    // if (trailSamples.length > 600) {
-    //   trailSamples = trailSamples.slice(-600);
-    // }
+    if (trailSamples.length > 600) {
+      trailSamples = trailSamples.slice(-600);
+    }
   }
 
   function drawGrid(center, scale, width, height) {
@@ -511,12 +511,13 @@ export function createMapController({ canvas, statusCursorEl, resetButton }) {
     statusCursorEl.textContent = `Cursor: (${formatNumber(worldPoint.x)}, ${formatNumber(worldPoint.y)})`;
   }
 
-  function pruneTrail(nowMs) {
-    const cutoff = nowMs - TRAIL_TTL_MS;
-    if (!Number.isFinite(cutoff)) {
-      return;
-    }
-    trailSamples = trailSamples.filter((sample) => sample.time >= cutoff);
+  function pruneTrail(_nowMs) {
+    // Trail pruning disabled to preserve the full history on the canvas.
+    // const cutoff = _nowMs - TRAIL_TTL_MS;
+    // if (!Number.isFinite(cutoff)) {
+    //   return;
+    // }
+    // trailSamples = trailSamples.filter((sample) => sample.time >= cutoff);
   }
 
   function getStateTimestampMs(state) {

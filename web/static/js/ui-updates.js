@@ -64,9 +64,7 @@ export function updatePendingCommands(listEl, commands) {
     return;
   }
 
-  const display = pending.slice(0, 6);
-
-  display.forEach((command, index) => {
+  pending.forEach((command, index) => {
     const item = document.createElement('li');
     item.className = 'command-list-item';
     const variant = index === 0 ? 'pending-front' : 'pending';
