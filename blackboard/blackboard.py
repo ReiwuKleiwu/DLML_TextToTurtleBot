@@ -1,7 +1,8 @@
 # Singleton Blackboard for sharing data across the behavior tree
 from collections import deque
 from typing import Any, Deque, Dict, List, Optional
-from threading import RLock, Timer
+from threading import RLock
+import time
 
 from utils.singleton_meta import SingletonMeta
 from events.event_bus import EventBus
@@ -64,6 +65,12 @@ class Blackboard(metaclass=SingletonMeta):
         self._set(BlackboardDataKey.NAVIGATION_STATUS, None)
         self._set(BlackboardDataKey.NAVIGATION_FEEDBACK, None)
         self._set(BlackboardDataKey.BEHAVIOUR_TREE_PAUSED, False)
+        self._set(BlackboardDataKey.ROBOT_TRAIL, [])
+        self._set(BlackboardDataKey.LLM_CHAT_LOG, [])
+
+        self._robot_trail_max_length = 200
+        self._robot_trail_min_distance = 0.05
+        self._chat_log_max_entries = 200
 
         # self._seed_test_commands()
 
@@ -341,11 +348,47 @@ class Blackboard(metaclass=SingletonMeta):
 
     def _on_robot_position_updated(self, event: DomainEvent):
         # data is of type geometry_msgs.msg.Vector3
-        self._set(BlackboardDataKey.ROBOT_POSITION, event.data)
+        translation = event.data
+        with self._lock:
+            self._set(BlackboardDataKey.ROBOT_POSITION, translation)
+            self._update_robot_trail(translation)
 
     def _on_robot_orientation_updated(self, event: DomainEvent):
         # data is of type geometry_msgs.msg.Quaternion
         self._set(BlackboardDataKey.ROBOT_ORIENTATION, event.data)
+
+    def _update_robot_trail(self, translation: Any) -> None:
+        """Append the latest robot position to the bounded trail."""
+        if translation is None:
+            return
+
+        try:
+            point = {
+                "x": float(getattr(translation, "x", 0.0)),
+                "y": float(getattr(translation, "y", 0.0)),
+                "z": float(getattr(translation, "z", 0.0)),
+                "timestamp": time.time(),
+            }
+        except (TypeError, ValueError):
+            return
+
+        trail = list(self.data.get(BlackboardDataKey.ROBOT_TRAIL, []))
+        if trail:
+            last = trail[-1]
+            dx = point["x"] - last.get("x", 0.0)
+            dy = point["y"] - last.get("y", 0.0)
+            dz = point["z"] - last.get("z", 0.0)
+            if (dx * dx + dy * dy + dz * dz) < (self._robot_trail_min_distance ** 2):
+                trail[-1] = point
+            else:
+                trail.append(point)
+        else:
+            trail.append(point)
+
+        if len(trail) > self._robot_trail_max_length:
+            trail = trail[-self._robot_trail_max_length:]
+
+        self._set(BlackboardDataKey.ROBOT_TRAIL, trail)
 
     def _on_robot_is_turning_updated(self, event: DomainEvent):
         # data is of type bool
@@ -366,6 +409,42 @@ class Blackboard(metaclass=SingletonMeta):
         self._set(BlackboardDataKey.CAMERA_RESOLUTION, event.data)
 
     # Snapshot helpers for LLM tools
+
+    def append_chat_message(self, role: str, text: str, metadata: Optional[Dict[str, Any]] = None) -> None:
+        """Record a conversational exchange for the mission board chat window."""
+        if not text:
+            return
+
+        entry = {
+            "role": role or "unknown",
+            "text": str(text),
+            "metadata": metadata or {},
+            "timestamp": time.time(),
+        }
+
+        with self._lock:
+            log = list(self.data.get(BlackboardDataKey.LLM_CHAT_LOG, []))
+            log.append(entry)
+            if len(log) > self._chat_log_max_entries:
+                log = log[-self._chat_log_max_entries:]
+            self._set(BlackboardDataKey.LLM_CHAT_LOG, log)
+
+    def snapshot_chat_log(self) -> List[Dict[str, Any]]:
+        """Return a shallow copy of the recorded LLM conversation."""
+        with self._lock:
+            log = list(self.data.get(BlackboardDataKey.LLM_CHAT_LOG, []))
+
+        snapshot: List[Dict[str, Any]] = []
+        for entry in log:
+            snapshot.append(
+                {
+                    "role": entry.get("role"),
+                    "text": entry.get("text"),
+                    "metadata": self._serialize_value(entry.get("metadata")),
+                    "timestamp": entry.get("timestamp"),
+                }
+            )
+        return snapshot
 
     def snapshot_command_state(self) -> Dict[str, Any]:
         """Return summaries of active and pending commands."""

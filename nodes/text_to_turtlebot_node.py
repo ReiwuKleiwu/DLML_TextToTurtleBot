@@ -26,6 +26,7 @@ from blackboard.blackboard import Blackboard
 from map.map import Map
 from natural_language_processing.llm_api import LLMAPI
 from langchain_core.messages import BaseMessage
+from web.mission_board_server import MissionBoardServer
 
 from perception.lidar.lidar_processor import LidarProcessor
 
@@ -46,6 +47,8 @@ class TextToTurtlebotNode(Node):
         self._nav_client = Nav2Client(self)
 
         self.map = Map(self)
+        self._mission_board_server = MissionBoardServer(instruction_handler=self.submit_llm_instruction)
+        self._mission_board_server.start()
 
         self._tf_subscriber = TFSubscriber(self, base_link_frame="base_link")
 
@@ -166,7 +169,11 @@ class TextToTurtlebotNode(Node):
         """Queue a natural language instruction for the LLM controller."""
         if not instruction:
             return
-        self._llm_requests.put(instruction)
+        cleaned = instruction.strip()
+        if not cleaned:
+            return
+        self._blackboard.append_chat_message("user", cleaned)
+        self._llm_requests.put(cleaned)
 
     def _handle_llm_instruction(self, msg: String) -> None:
         instruction = msg.data.strip()
@@ -191,8 +198,14 @@ class TextToTurtlebotNode(Node):
                 response_text = result.get("output", "")
                 if response_text:
                     self.get_logger().info(f"LLM response: {response_text}")
+                    self._blackboard.append_chat_message("assistant", response_text)
             except Exception as exc:  # noqa: BLE001 - capture LLM issues without crashing node
                 self.get_logger().error(f"LLM processing failed: {exc}")
+                self._blackboard.append_chat_message(
+                    "system",
+                    f"LLM processing failed: {exc}",
+                    metadata={"error": True},
+                )
 
     def _run_tree_loop(self) -> None:
         while not self._shutdown_event.is_set():
@@ -217,4 +230,6 @@ class TextToTurtlebotNode(Node):
             self._tick_thread.join(timeout=1.0)
         if self._llm_thread.is_alive():
             self._llm_thread.join(timeout=1.0)
+        if hasattr(self, "_mission_board_server"):
+            self._mission_board_server.stop()
         return super().destroy_node()

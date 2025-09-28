@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>TurtleBot Mission Board</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <div class="layout">
+      <header class="top-bar">
+        <h1>TurtleBot Mission Board</h1>
+        <div class="status-group">
+          <span id="status-behaviour" class="chip">Tree Active</span>
+          <span id="status-navigation" class="chip">Nav: —</span>
+          <span id="status-target" class="chip">Target: None</span>
+          <span id="status-time" class="chip">Updated —</span>
+          <span id="status-cursor" class="chip">Cursor: —</span>
+          <button type="button" id="reset-view" class="chip button">Reset View</button>
+        </div>
+      </header>
+      <main class="main-content">
+        <section class="map-section">
+          <div class="map-canvas-wrapper">
+            <canvas id="mission-map"></canvas>
+          </div>
+          <div class="legend">
+            <div class="legend-item">
+              <span class="legend-swatch robot"></span>
+              <span>Robot</span>
+            </div>
+            <div class="legend-item">
+              <span class="legend-swatch trail"></span>
+              <span>Trail</span>
+            </div>
+            <div class="legend-item">
+              <span class="legend-swatch object"></span>
+              <span>Persistent Object</span>
+            </div>
+            <div class="legend-item">
+              <span class="legend-swatch target"></span>
+              <span>Target Object</span>
+            </div>
+            <div class="legend-item">
+              <span class="legend-swatch nav"></span>
+              <span>Nav Goal</span>
+            </div>
+          </div>
+        </section>
+        <aside class="info-panel">
+          <div class="panel-tabs" role="tablist" aria-label="Mission details">
+            <button
+              id="tab-chat"
+              class="panel-tab active"
+              type="button"
+              role="tab"
+              aria-selected="true"
+              aria-controls="panel-chat"
+              data-tab-target="panel-chat"
+            >
+              LLM Chat
+            </button>
+            <button
+              id="tab-commands"
+              class="panel-tab"
+              type="button"
+              role="tab"
+              aria-selected="false"
+              aria-controls="panel-commands"
+              data-tab-target="panel-commands"
+            >
+              Commands
+            </button>
+            <button
+              id="tab-target-nav"
+              class="panel-tab"
+              type="button"
+              role="tab"
+              aria-selected="false"
+              aria-controls="panel-target-nav"
+              data-tab-target="panel-target-nav"
+            >
+              Target & Nav
+            </button>
+            <button
+              id="tab-objects"
+              class="panel-tab"
+              type="button"
+              role="tab"
+              aria-selected="false"
+              aria-controls="panel-objects"
+              data-tab-target="panel-objects"
+            >
+              Persistent Objects
+            </button>
+          </div>
+          <div class="panel-tabpanels">
+            <section
+              id="panel-chat"
+              class="tab-panel active"
+              role="tabpanel"
+              tabindex="0"
+              aria-labelledby="tab-chat"
+              data-tab-panel
+            >
+              <div class="tab-panel-inner">
+                <div class="card chat-card">
+                  <h2>LLM Chat</h2>
+                  <div id="chat-log" class="chat-log" aria-live="polite"></div>
+                  <form id="chat-form" class="chat-form" autocomplete="off">
+                    <textarea
+                      id="chat-input"
+                      class="chat-input"
+                      rows="2"
+                      placeholder="Type a message"
+                      aria-label="Send message to LLM"
+                    ></textarea>
+                    <div class="chat-actions">
+                      <span id="chat-status" class="chat-status" role="status"></span>
+                      <button type="submit" id="chat-send" class="chat-send">Send</button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            </section>
+            <section
+              id="panel-commands"
+              class="tab-panel"
+              role="tabpanel"
+              tabindex="0"
+              aria-labelledby="tab-commands"
+              data-tab-panel
+              hidden
+            >
+              <div class="tab-panel-inner tab-panel-inner--scroll">
+                <div class="card">
+                  <h2>Active Command</h2>
+                  <div id="active-command" class="card-content command-slot">None</div>
+                </div>
+                <div class="card command-card">
+                  <h2>Pending Commands</h2>
+                  <ul id="pending-commands" class="command-list"></ul>
+                </div>
+              </div>
+            </section>
+            <section
+              id="panel-target-nav"
+              class="tab-panel"
+              role="tabpanel"
+              tabindex="0"
+              aria-labelledby="tab-target-nav"
+              data-tab-panel
+              hidden
+            >
+              <div class="tab-panel-inner tab-panel-inner--scroll">
+                <div class="card">
+                  <h2>Target Details</h2>
+                  <div id="target-details" class="card-content">No target selected.</div>
+                </div>
+                <div class="card">
+                  <h2>Navigation</h2>
+                  <div id="navigation-details" class="card-content">No navigation goal.</div>
+                </div>
+              </div>
+            </section>
+            <section
+              id="panel-objects"
+              class="tab-panel"
+              role="tabpanel"
+              tabindex="0"
+              aria-labelledby="tab-objects"
+              data-tab-panel
+              hidden
+            >
+              <div class="tab-panel-inner tab-panel-inner--scroll">
+                <div class="card command-card">
+                  <h2>Persistent Objects</h2>
+                  <ul id="persistent-objects" class="object-list"></ul>
+                </div>
+              </div>
+            </section>
+          </div>
+        </aside>
+      </main>
+    </div>
+    <script type="module" src="/static/js/main.js"></script>
+  </body>
+</html>

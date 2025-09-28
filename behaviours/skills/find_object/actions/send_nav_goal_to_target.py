@@ -96,7 +96,7 @@ class SendNavGoalToTarget(py_trees.behaviour.Behaviour):
             self._goal_sent = True
             return Status.SUCCESS
 
-        self.logger.warn("Failed to send Nav2 goal for target object")
+        self.logger.error("Failed to send Nav2 goal for target object")
         return Status.FAILURE
     
     def _find_selected_target_in_robot_map(self, map: List[PersistentTrackedObject], target_object: DetectedObject) -> Optional[DetectedObject]:

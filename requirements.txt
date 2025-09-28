@@ -5,3 +5,5 @@ ultralytics
 langchain
 pydantic
 langchain-google-genai
+fastapi
+uvicorn

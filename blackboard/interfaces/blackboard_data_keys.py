@@ -14,6 +14,7 @@ class BlackboardDataKey(str, Enum):
     ROBOT_POSITION = 'robot-position'
     ROBOT_ORIENTATION = 'robot-orientation'
     ROBOT_IS_TURNING = 'robot-is-turning'
+    ROBOT_TRAIL = 'robot-trail'
 
     ROBOT_MAP = "robot-map"
 
@@ -35,3 +36,4 @@ class BlackboardDataKey(str, Enum):
     NAVIGATION_FEEDBACK = 'navigation-feedback'
 
     BEHAVIOUR_TREE_PAUSED = 'behaviour-tree-paused'
+    LLM_CHAT_LOG = 'llm-chat-log'
