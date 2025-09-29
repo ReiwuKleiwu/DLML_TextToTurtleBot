@@ -25,6 +25,8 @@ export function createChatController({
       const item = document.createElement('div');
       item.className = `chat-message ${role}`;
 
+      const metadata = entry && typeof entry.metadata === 'object' ? entry.metadata : null;
+
       const header = document.createElement('div');
       header.className = 'chat-message-header';
 
@@ -45,6 +47,29 @@ export function createChatController({
       textEl.className = 'chat-message-text';
       textEl.textContent = entry && typeof entry.text === 'string' ? entry.text : '';
       item.appendChild(textEl);
+
+      const audioMeta = metadata && metadata.audio && typeof metadata.audio === 'object'
+        ? metadata.audio
+        : null;
+      if (audioMeta && audioMeta.url) {
+        const audioWrapper = document.createElement('div');
+        audioWrapper.className = 'chat-message-audio';
+
+        const audioEl = document.createElement('audio');
+        audioEl.controls = true;
+        audioEl.preload = 'none';
+        audioEl.src = audioMeta.url;
+        audioEl.title = audioMeta.provider
+          ? `TTS playback (${audioMeta.provider})`
+          : 'TTS playback';
+
+        if (audioMeta.format) {
+          audioEl.type = `audio/${audioMeta.format}`;
+        }
+
+        audioWrapper.appendChild(audioEl);
+        item.appendChild(audioWrapper);
+      }
 
       logEl.appendChild(item);
     }

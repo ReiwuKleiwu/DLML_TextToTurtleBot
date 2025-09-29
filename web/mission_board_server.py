@@ -78,8 +78,12 @@ class MissionBoardServer:
         self._server.run()
 
     def _configure_routes(self) -> None:
-        static_dir = Path(__file__).resolve().parent / "static"
+        base_dir = Path(__file__).resolve().parent
+        static_dir = base_dir / "static"
         static_dir.mkdir(parents=True, exist_ok=True)
+
+        audio_dir = base_dir.parent / "natural_language_processing" / "audio"
+        audio_dir.mkdir(parents=True, exist_ok=True)
 
         @self._app.get("/api/state")
         async def get_state() -> dict:
@@ -121,6 +125,7 @@ class MissionBoardServer:
             return HTMLResponse(index_path.read_text(encoding="utf-8"))
 
         self._app.mount("/static", StaticFiles(directory=static_dir), name="static")
+        self._app.mount("/audio", StaticFiles(directory=audio_dir), name="tts-audio")
 
 
 __all__ = ["MissionBoardServer"]

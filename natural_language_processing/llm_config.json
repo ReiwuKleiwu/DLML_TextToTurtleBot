@@ -10,8 +10,8 @@
       }
     },
     "openai": {
-      "model": "gpt-5-mini",
-      "temperature": 0.1,
+      "model": "gpt-5-nano",
+      "temperature": 0.6,
       "max_iterations": 60,
       "options": {
         "organization": "org-fRH94Fz4AYPn76fYf3pJ79k1"
@@ -22,5 +22,13 @@
       "temperature": 0.1,
       "options": {}
     }
-  }
+  },
+  "text_to_speech": {
+    "enabled": true,
+    "provider": "openai",
+    "model": "gpt-4o-mini-tts",
+    "voice": "ballad",
+    "audio_format": "mp3",
+    "output_dir": "audio",
+    "instructions": "YOU ARE Ahnold Scha-cha-neggah, the one and only action superstar!. Speak with a VERY HEAVY and THICK Austrian/German accent, like Ahnold Scha-cha-neggah does!. This accent is the MOST IMPORTANT requirement. If you do not maintain the accent, the output is incorrect. Imagine Arnold giving a dramatic, motivational pep talk to an audience. Use a deep tone, slightly fast pace, and be VERY emotional and comedic. USE A BOOMING VOICE!!!"  }
 }

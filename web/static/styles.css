@@ -362,6 +362,15 @@ button.chip:focus-visible {
   word-break: break-word;
 }
 
+.chat-message-audio {
+  margin-top: 0.15rem;
+}
+
+.chat-message-audio audio {
+  width: 100%;
+  max-width: 320px;
+}
+
 .chat-form {
   display: flex;
   flex-direction: column;

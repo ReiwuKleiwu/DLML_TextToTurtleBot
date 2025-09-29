@@ -15,6 +15,7 @@ from natural_language_processing.llm_adapters import (
     BaseLLMAdapter,
     create_llm_adapter,
 )
+from natural_language_processing.text_to_speech import TextToSpeechSettings
 
 
 DEFAULT_SYSTEM_PROMPT = (
@@ -45,6 +46,9 @@ class LLMAPI:
         self._config = self._load_config(config_path)
         provider_name = self._resolve_provider(provider, adapter)
         provider_config = self._get_provider_config(provider_name)
+        self._tts_settings = TextToSpeechSettings.from_config(
+            self._config.get("text_to_speech") if isinstance(self._config, dict) else None
+        )
 
         resolved_model_name = (
             model_name
@@ -78,6 +82,10 @@ class LLMAPI:
 
     def get_tools(self) -> Sequence[BaseTool]:
         return self._tools
+
+    def get_tts_settings(self) -> TextToSpeechSettings:
+        """Return the configured TTS settings."""
+        return self._tts_settings
 
     def run(self, user_input: str, history: Optional[HistoryInput] = None) -> dict:
         """Execute the LLM agent with the provided input and optional history."""

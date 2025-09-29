@@ -1,7 +1,9 @@
 import queue
+import re
 import threading
 import time
-from typing import List, Optional
+from pathlib import Path
+from typing import Any, Dict, List, Optional
 
 from cv_bridge import CvBridge
 from perception.camera.camera_processor import CameraProcessor
@@ -25,6 +27,10 @@ from events.event_bus import EventBus
 from blackboard.blackboard import Blackboard
 from map.map import Map
 from natural_language_processing.llm_api import LLMAPI
+from natural_language_processing.text_to_speech import (
+    TextToSpeechError,
+    TextToSpeechService,
+)
 from langchain_core.messages import BaseMessage
 from web.mission_board_server import MissionBoardServer
 
@@ -83,6 +89,7 @@ class TextToTurtlebotNode(Node):
 
         # LLM agent integration
         self._llm_api = LLMAPI()
+        self._tts_service = TextToSpeechService(self._llm_api.get_tts_settings())
         self._llm_history: List[BaseMessage] = []
         self._llm_requests: "queue.Queue[Optional[str]]" = queue.Queue()
 
@@ -198,7 +205,12 @@ class TextToTurtlebotNode(Node):
                 response_text = result.get("output", "")
                 if response_text:
                     self.get_logger().info(f"LLM response: {response_text}")
-                    self._blackboard.append_chat_message("assistant", response_text)
+                    metadata = self._maybe_generate_tts_metadata(response_text)
+                    self._blackboard.append_chat_message(
+                        "assistant",
+                        response_text,
+                        metadata=metadata,
+                    )
             except Exception as exc:  # noqa: BLE001 - capture LLM issues without crashing node
                 self.get_logger().error(f"LLM processing failed: {exc}")
                 self._blackboard.append_chat_message(
@@ -206,6 +218,76 @@ class TextToTurtlebotNode(Node):
                     f"LLM processing failed: {exc}",
                     metadata={"error": True},
                 )
+
+    def _maybe_generate_tts_metadata(self, response_text: str) -> Optional[Dict[str, Any]]:
+        """Convert the assistant response to speech when enabled."""
+        service = getattr(self, "_tts_service", None)
+        if service is None or not service.is_enabled():
+            return None
+
+        tts_text = self._extract_tts_text(response_text)
+        if not tts_text:
+            self.get_logger().debug("No TTS_Text segment found; skipping audio generation.")
+            return None
+
+        try:
+            audio_path = service.synthesise(tts_text)
+        except TextToSpeechError as exc:
+            self.get_logger().warning(f"TTS synthesis failed: {exc}")
+            return None
+
+        if not audio_path:
+            return None
+
+        audio_url = self._resolve_audio_url(audio_path)
+        if not audio_url:
+            self.get_logger().warning(f"Unable to resolve audio URL for {audio_path}")
+            return None
+
+        audio_format = audio_path.suffix.lstrip('.') or service.settings.audio_format
+
+        return {
+            "audio": {
+                "url": audio_url,
+                "format": audio_format,
+                "provider": service.settings.provider,
+                "text": tts_text,
+            }
+        }
+
+    def _resolve_audio_url(self, audio_path: Path) -> Optional[str]:
+        service = getattr(self, "_tts_service", None)
+        if service is None:
+            return None
+
+        try:
+            base_dir = service.settings.resolved_output_dir().resolve()
+            relative_path = audio_path.resolve().relative_to(base_dir)
+        except (ValueError, OSError):
+            return None
+
+        return f"/audio/{relative_path.as_posix()}"
+
+    @staticmethod
+    def _extract_tts_text(response_text: str) -> Optional[str]:
+        if not response_text:
+            return None
+
+        # Try quoted form first: TTS_Text: "..."
+        quoted_match = re.search(r"TTS_Text\s*:\s*\"(?P<text>.*?)\"", response_text, re.DOTALL)
+        if quoted_match:
+            text = quoted_match.group("text").strip()
+            return text if text else None
+
+        # Fallback: take text after TTS_Text: up to newline
+        fallback_match = re.search(r"TTS_Text\s*:\s*(?P<text>.+)", response_text)
+        if fallback_match:
+            text = fallback_match.group("text").strip()
+            if text:
+                # Stop at first explicit newline to avoid capturing following sections
+                first_line = text.splitlines()[0].strip().strip('"')
+                return first_line if first_line else None
+        return None
 
     def _run_tree_loop(self) -> None:
         while not self._shutdown_event.is_set():
