@@ -24,8 +24,8 @@ DEFAULT_SYSTEM_PROMPT = (
     "Prefer conservative actions, avoid redundant commands, and clearly explain any tool usage."
 )
 
-DEFAULT_PROMPT_PATH = Path(__file__).with_name("system_prompt.txt")
-DEFAULT_CONFIG_PATH = Path(__file__).with_name("llm_config.json")
+DEFAULT_PROMPT_PATH = Path(__file__).resolve().parent.parent / "system_prompt.txt"
+DEFAULT_CONFIG_PATH = Path(__file__).resolve().parent.parent / "llm_config.json"
 DEFAULT_MAX_ITERATIONS = 40
 
 

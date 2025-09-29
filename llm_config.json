@@ -1,9 +1,9 @@
 {
-  "default_provider": "openai",
+  "default_provider": "ollama",
   "max_iterations": 40,
   "adapters": {
     "ollama": {
-      "model": "llama3",
+      "model": "llama3.2:3b",
       "temperature": 0.1,
       "options": {
         "base_url": "http://localhost:11434"
@@ -11,7 +11,7 @@
     },
     "openai": {
       "model": "gpt-5-nano",
-      "temperature": 0.1,
+      "temperature": 0.6,
       "max_iterations": 60,
       "options": {
         "organization": "org-fRH94Fz4AYPn76fYf3pJ79k1"
@@ -30,5 +30,5 @@
     "voice": "ballad",
     "audio_format": "mp3",
     "output_dir": "audio",
-    "instructions": "YOU ARE Ahnold Scha-cha-neggah, the one and only action superstar!. Speak with a VERY HEAVY and THICK Austrian/German accent, like Ahnold Scha-cha-neggah does!. This accent is the MOST IMPORTANT requirement. If you do not maintain the accent, the output is incorrect. Imagine Arnold giving a dramatic, motivational pep talk to an audience. Use a deep tone, slightly fast pace, and be VERY emotional and comedic. USE A BOOMING VOICE!!!"  }
+    "instructions": "Consistently use a Heavy Austrian accent as the one and only Digital Action Hero Bodybuilder, with **EXTREME** emphasis that you speak way over the top for comedic effect. Use a booming tone, use pauses for dramatic effect. No exceptions!"  }
 }
