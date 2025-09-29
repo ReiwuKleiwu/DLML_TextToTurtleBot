@@ -11,7 +11,7 @@
     },
     "openai": {
       "model": "gpt-5-nano",
-      "temperature": 0.6,
+      "temperature": 0.1,
       "max_iterations": 60,
       "options": {
         "organization": "org-fRH94Fz4AYPn76fYf3pJ79k1"
@@ -24,7 +24,7 @@
     }
   },
   "text_to_speech": {
-    "enabled": true,
+    "enabled": false,
     "provider": "openai",
     "model": "gpt-4o-mini-tts",
     "voice": "ballad",
