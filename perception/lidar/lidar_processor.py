@@ -4,7 +4,7 @@ from events.event_bus import EventBus
 from events.interfaces.events import EventType, DomainEvent
 
 class LidarProcessor:
-    def __init__(self, max_distance_threshold = 1.0, front_angle_dec = 30.0) -> None:
+    def __init__(self, max_distance_threshold = 0.000001, front_angle_dec = 30.0) -> None:
         self._event_bus = EventBus()
         self.max_distance_threshold = max_distance_threshold
         self.front_angle_deg = front_angle_dec

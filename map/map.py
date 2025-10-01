@@ -79,7 +79,6 @@ class Map:
 
         self._cleanup_and_promote_objects()
         self._event_bus.publish(DomainEvent(EventType.MAP_UPDATED, self.persistent_tracked_objects))
-        # print(self)
        
     
     def _process_detected_object(self, detected_object: DetectedObject):

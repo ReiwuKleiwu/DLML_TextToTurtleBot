@@ -24,9 +24,10 @@ class DepthCameraProcessor():
         self.camera_frame = "oakd_rgb_camera_optical_frame"
         self.world_frame = "map"
 
-    def handle(self, msg) -> None: 
+    def handle(self, msg) -> None:
         self.current_msg_timestamp = msg.header.stamp
-        depth_image_raw = self._bridge.imgmsg_to_cv2(msg, "32FC1") * 1000.0
+
+        depth_image_raw = self._bridge.imgmsg_to_cv2(msg, "16UC1") # * 1000.0
         detected_objects = self._blackboard.get(BlackboardDataKey.DETECTED_OBJECTS, {})
 
         if detected_objects is None:
@@ -50,12 +51,13 @@ class DepthCameraProcessor():
             self.intrinsics.model = rs2.distortion.brown_conrady
         elif camera_info.distortion_model == 'equidistant':
             self.intrinsics.model = rs2.distortion.kannala_brandt4
-        self.intrinsics.coeffs = [value for value in camera_info.d]
+        self.intrinsics.coeffs = [value for value in camera_info.d[:5]]
         
     def _calculate_world_coordinates(self, depth_image: ndarray) -> None:     
         detected_objects: Dict[str, List[DetectedObject]] = self._blackboard.get(BlackboardDataKey.DETECTED_OBJECTS, {})
         detected_object_classes = set(detected_objects.keys())
         detected_objects_with_coordinates = {}
+
 
         if not self.intrinsics:
             return
@@ -89,12 +91,17 @@ class DepthCameraProcessor():
                 
                 depth_meters = center_depth / 1000.0
                 camera_coords = rs2.rs2_deproject_pixel_to_point(self.intrinsics, [center_x, center_y], depth_meters)
+                
+                print(f"Camera Coords: {camera_coords[0]} | {camera_coords[1]} | {camera_coords[2]}")
+
                 world_coords = self._transform_to_world_coordinates(
                     camera_coords[0],
                     camera_coords[1],
                     camera_coords[2],
                     self.current_msg_timestamp,
                 )
+
+                print(world_coords)
 
                 if world_coords is None:
                     continue

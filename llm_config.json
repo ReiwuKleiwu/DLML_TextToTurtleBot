@@ -3,7 +3,7 @@
   "max_iterations": 40,
   "adapters": {
     "ollama": {
-      "model": "llama3.2:3b",
+      "model": "llama3.1:8b",
       "temperature": 0.1,
       "options": {
         "base_url": "http://localhost:11434"

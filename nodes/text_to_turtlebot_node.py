@@ -38,7 +38,9 @@ from perception.lidar.lidar_processor import LidarProcessor
 
 class TextToTurtlebotNode(Node):
     def __init__(self, namespace: str = '', use_turtlebot_sim: bool = False) -> None:
-        super().__init__('TextToTurtlebotNode', namespace=namespace)
+        super().__init__('TextToTurtlebotNode', namespace=namespace
+                         #, cli_args=[" --ros-args -r /tf:=tf -r /tf_static:=tf_static "]
+                         )
         self.get_logger().info('Text to Turtlebot Node has been started.')
 
         self._event_bus = EventBus()
@@ -48,7 +50,7 @@ class TextToTurtlebotNode(Node):
 
         self._twist = TwistWrapper(use_stamped=use_turtlebot_sim)
         msg_type = TwistStamped if use_turtlebot_sim else Twist
-        self._cmd_publisher = self.create_publisher(msg_type, 'cmd_vel', 10)
+        self._cmd_publisher = self.create_publisher(msg_type, f"{namespace}/cmd_vel", 10)
 
         self._nav_client = Nav2Client(self)
 
@@ -60,7 +62,7 @@ class TextToTurtlebotNode(Node):
 
         self._object_detector = ObjectDetector(
             './yolo_models',
-            confidence_threshold=0.3
+            confidence_threshold=0.05
         )
         self._target_selector = TargetSelector(
             persistence_frames=10,
@@ -113,28 +115,28 @@ class TextToTurtlebotNode(Node):
 
         self.create_subscription(
             Image,
-            "/oakd/rgb/preview/image_raw",
+            f"{namespace}/oakd/rgb/preview/image_raw",
             self._camera_processor.handle,
             10
         )
 
         self.create_subscription(
             CameraInfo,
-            '/oakd/rgb/preview/camera_info',
+            f"{namespace}/oakd/rgb/preview/camera_info",
             self._depth_camera_processor.set_camera_intrinsics,
             10
         )
 
         self.create_subscription(
             Image,
-            "/oakd/rgb/preview/depth",
+            f"{namespace}/oakd/stereo/image_raw",
             self._depth_camera_processor.handle,
             10
         )
 
         self.create_subscription(
             LaserScan,
-            '/scan',
+            f"{namespace}/scan",
             self._lidar_processor.handle,
             10
         )
@@ -291,6 +293,11 @@ class TextToTurtlebotNode(Node):
 
     def _run_tree_loop(self) -> None:
         while not self._shutdown_event.is_set():
+            #self._twist.reset()
+            #self._twist.angular.z = -5.0
+            #self._cmd_publisher.publish(self._twist.get_message())
+            #self._logger.info("ROTATION!")
+
             if self._blackboard.is_behaviour_tree_paused():
                 # Sleep in short intervals so resume responds quickly.
                 self._shutdown_event.wait(timeout=self._tick_period)
