@@ -38,7 +38,8 @@ class TargetSelector:
         Args:
             detections: List of detected objects
         """
-        detections = self._blackboard.get(BlackboardDataKey.DETECTED_OBJECTS_WITH_COORDINATES, {})
+        detections_with_coordinates = self._blackboard.get(BlackboardDataKey.DETECTED_OBJECTS_WITH_COORDINATES, {})
+        detections = self._blackboard.get(BlackboardDataKey.DETECTED_OBJECTS)
 
         target_object_class = self._blackboard.get(BlackboardDataKey.TARGET_OBJECT_CLASS)
         if not target_object_class:
@@ -53,12 +54,14 @@ class TargetSelector:
             return 
 
         if self._current_target is not None:
-            closest_detection, distance = self._closest_detection(target_detections, self._current_target)
-            if closest_detection is not None and distance <= self._distance_threshold:
-                self._current_target = closest_detection
-                self._frames_with_current_target += 1
-                self._event_bus.publish(DomainEvent(event_type=EventType.TARGET_OBJECT_SELECTED, data=closest_detection))
-                return 
+            target_detections_with_coordinates = detections_with_coordinates.get(target_object_class, [])
+            if target_detections_with_coordinates:
+                closest_detection, distance = self._closest_detection(target_detections, self._current_target)
+                if closest_detection is not None and distance <= self._distance_threshold:
+                    self._current_target = closest_detection
+                    self._frames_with_current_target += 1
+                    self._event_bus.publish(DomainEvent(event_type=EventType.TARGET_OBJECT_SELECTED, data=closest_detection))
+                    return 
 
             if self._frames_with_current_target < self._persistence_frames:
                 self._frames_with_current_target += 1

@@ -48,7 +48,7 @@ class TextToTurtlebotNode(Node):
 
         self._twist = TwistWrapper(use_stamped=use_turtlebot_sim)
         msg_type = TwistStamped if use_turtlebot_sim else Twist
-        self._cmd_publisher = self.create_publisher(msg_type, 'cmd_vel', 10)
+        self._cmd_publisher = self.create_publisher(msg_type, f'{namespace}/cmd_vel', 10)
 
         self._nav_client = Nav2Client(self)
 
@@ -113,35 +113,36 @@ class TextToTurtlebotNode(Node):
 
         self.create_subscription(
             Image,
-            "/oakd/rgb/preview/image_raw",
+            f'{namespace}oakd/rgb/preview/image_raw',
             self._camera_processor.handle,
             10
         )
 
         self.create_subscription(
             CameraInfo,
-            '/oakd/rgb/preview/camera_info',
+             f'{namespace}/oakd/rgb/preview/camera_info',
             self._depth_camera_processor.set_camera_intrinsics,
             10
         )
 
         self.create_subscription(
             Image,
-            "/oakd/rgb/preview/depth",
+            f'{namespace}/oakd/stereo/image_raw' if not use_turtlebot_sim
+            else f'{namespace}/oakd/rgb/preview/depth',
             self._depth_camera_processor.handle,
             10
         )
 
         self.create_subscription(
             LaserScan,
-            '/scan',
+             f'{namespace}/scan',
             self._lidar_processor.handle,
             10
         )
 
         self.create_subscription(
             String,
-            'llm_instruction',
+             'llm_instruction',
             self._handle_llm_instruction,
             10,
         )

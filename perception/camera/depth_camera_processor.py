@@ -26,7 +26,16 @@ class DepthCameraProcessor():
 
     def handle(self, msg) -> None: 
         self.current_msg_timestamp = msg.header.stamp
-        depth_image_raw = self._bridge.imgmsg_to_cv2(msg, "32FC1") * 1000.0
+
+        if msg.encoding == '32FC1':
+            depth_image_raw = self._bridge.imgmsg_to_cv2(msg, '32FC1') * 1000.0
+        elif msg.encoding == '16UC1':
+            depth_image_raw = self._bridge.imgmsg_to_cv2(msg, '16UC1')
+        else: 
+            depth_image_raw = self._bridge.imgmsg_to_cv2(msg, msg.encoding)
+            if np.nanmax(depth_image_raw) < 50:
+                depth_image_raw = depth_image_raw * 1000.0
+
         detected_objects = self._blackboard.get(BlackboardDataKey.DETECTED_OBJECTS, {})
 
         if detected_objects is None:
@@ -50,7 +59,7 @@ class DepthCameraProcessor():
             self.intrinsics.model = rs2.distortion.brown_conrady
         elif camera_info.distortion_model == 'equidistant':
             self.intrinsics.model = rs2.distortion.kannala_brandt4
-        self.intrinsics.coeffs = [value for value in camera_info.d]
+        self.intrinsics.coeffs = [value for value in camera_info.d[:5]]
         
     def _calculate_world_coordinates(self, depth_image: ndarray) -> None:     
         detected_objects: Dict[str, List[DetectedObject]] = self._blackboard.get(BlackboardDataKey.DETECTED_OBJECTS, {})
