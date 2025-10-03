@@ -26,6 +26,9 @@ class MissionBoardStateBuilder:
         motion_snapshot = self._blackboard.snapshot_motion_status()
         command_snapshot = self._blackboard.snapshot_command_state()
         map_snapshot = self._blackboard.snapshot_robot_map()
+        lidar_snapshot = self._serialize_lidar_points(
+            self._blackboard.get(BlackboardDataKey.LIDAR_POINTS)
+        )
 
         target_object = self._blackboard.get(BlackboardDataKey.SELECTED_TARGET_OBJECT)
         target_summary = self._serialize_detected_object(target_object)
@@ -67,6 +70,7 @@ class MissionBoardStateBuilder:
                 "count": map_snapshot.get("persistent_object_count", 0),
                 "objects": persistent_objects,
             },
+            "lidar": lidar_snapshot,
             "target_class": self._blackboard.get(BlackboardDataKey.TARGET_OBJECT_CLASS),
             "chat": chat_log,
         }
@@ -156,6 +160,43 @@ class MissionBoardStateBuilder:
                 item["is_target"] = False
             results.append(item)
         return results
+
+    def _serialize_lidar_points(self, value: Any) -> Dict[str, Any]:
+        if not isinstance(value, dict):
+            return {"points": []}
+
+        raw_points = value.get("points")
+        points: List[Dict[str, float]] = []
+
+        if isinstance(raw_points, list):
+            for entry in raw_points:
+                if not isinstance(entry, dict):
+                    continue
+
+                x = self._coerce_float(entry.get("x"))
+                y = self._coerce_float(entry.get("y"))
+                if x is None or y is None:
+                    continue
+
+                point: Dict[str, float] = {"x": x, "y": y}
+
+                distance = self._coerce_float(entry.get("distance"))
+                if distance is not None:
+                    point["distance"] = distance
+
+                points.append(point)
+
+        payload: Dict[str, Any] = {"points": points}
+
+        frame_id = value.get("frame_id")
+        if isinstance(frame_id, str) and frame_id:
+            payload["frame_id"] = frame_id
+
+        timestamp = self._coerce_float(value.get("timestamp"))
+        if timestamp is not None:
+            payload["timestamp"] = timestamp
+
+        return payload
 
     def _get_quaternion_components(self, value: Any) -> Optional[Tuple[float, float, float, float]]:
         if value is None:

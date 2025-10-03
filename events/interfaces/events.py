@@ -12,6 +12,7 @@ class EventType(str, Enum):
     
     LIDAR_OBSTACLE_PRESENT = "lidar-obstacle-present"
     LIDAR_OBSTACLE_ABSENT = "lidar-no-obstacle-absent"
+    LIDAR_POINTS_UPDATED = "lidar-points-updated"
 
     CAMERA_RESOLUTION_SET = "camera-resolution-set"
 

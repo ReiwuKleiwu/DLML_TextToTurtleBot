@@ -64,6 +64,32 @@ export function createMapController({ canvas, statusCursorEl, resetButton }) {
     const persistentObjects = state.persistent_map && Array.isArray(state.persistent_map.objects)
       ? state.persistent_map.objects.filter((obj) => obj && isValidPoint(obj.world))
       : [];
+    const lidarPoints = Array.isArray(state && state.lidar && state.lidar.points)
+      ? state.lidar.points
+          .map((point) => {
+            const base = normalizePoint(point && (point.world || point));
+            if (!isValidPoint(base)) {
+              return null;
+            }
+            let distance = undefined;
+            if (point && typeof point.distance === 'number' && Number.isFinite(point.distance)) {
+              distance = point.distance;
+            } else if (point && Number.isFinite(Number(point.distance))) {
+              distance = Number(point.distance);
+            }
+
+            return {
+              x: base.x,
+              y: base.y,
+              distance,
+            };
+          })
+          .filter(Boolean)
+      : [];
+
+    if (lidarPoints.length > 0) {
+      window.__latestLidarPoints = lidarPoints;
+    }
     const navGoal = (state.navigation && state.navigation.goal && state.navigation.goal.position && isValidPoint(state.navigation.goal.position))
       ? state.navigation.goal
       : null;
@@ -73,6 +99,7 @@ export function createMapController({ canvas, statusCursorEl, resetButton }) {
     if (robotPos) points.push(robotPos);
     trail.forEach((point) => points.push(point));
     persistentObjects.forEach((object) => points.push(object.world));
+    lidarPoints.forEach((point) => points.push(point));
     if (navGoal) points.push(navGoal.position);
     if (target) points.push(target.world);
 
@@ -130,6 +157,7 @@ export function createMapController({ canvas, statusCursorEl, resetButton }) {
 
     drawGrid(viewState.center, scale, width, height);
     drawTrail([...trail, robotPos].filter(isValidPoint), scale);
+    drawLidarPoints(lidarPoints, scale);
     drawPersistentObjects(persistentObjects, scale);
 
     if (robotPos && target) {
@@ -249,6 +277,42 @@ export function createMapController({ canvas, statusCursorEl, resetButton }) {
       ctx.lineCap = 'round';
       ctx.stroke();
     }
+    ctx.restore();
+  }
+
+  function drawLidarPoints(points, scale) {
+    if (!Array.isArray(points) || points.length === 0) {
+      return;
+    }
+
+    const width = canvas.width / devicePixelRatioCache;
+    const height = canvas.height / devicePixelRatioCache;
+    const center = viewState.center;
+
+    if (!center) {
+      return;
+    }
+
+    window.__lidarDrawCalls = (window.__lidarDrawCalls || 0) + 1;
+
+    const radius = Math.max(1.5, Math.min(4, scale * 0.015));
+
+    ctx.save();
+
+    for (const point of points) {
+      const screen = worldToScreen(point, center, scale, width, height);
+      if (!Number.isFinite(screen.x) || !Number.isFinite(screen.y)) {
+        continue;
+      }
+
+      const fill = 'rgba(255, 216, 102, 0.88)';
+      ctx.fillStyle = fill;
+
+      ctx.beginPath();
+      ctx.arc(screen.x, screen.y, radius, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
     ctx.restore();
   }
 

@@ -3,6 +3,7 @@ from enum import Enum
 
 class BlackboardDataKey(str, Enum):
     LIDAR_OBSTACLE_PRESENT = "lidar-obstacle-present"
+    LIDAR_POINTS = "lidar-points"
 
     CAMERA_RESOLUTION = 'camera-resolution'
 

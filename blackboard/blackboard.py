@@ -2,6 +2,7 @@
 from collections import deque
 from typing import Any, Deque, Dict, List, Optional
 from threading import RLock
+import math
 import time
 
 from utils.singleton_meta import SingletonMeta
@@ -22,6 +23,7 @@ class Blackboard(metaclass=SingletonMeta):
 
         self._event_bus.subscribe(EventType.LIDAR_OBSTACLE_PRESENT, self._on_lidar_obstacle_present)
         self._event_bus.subscribe(EventType.LIDAR_OBSTACLE_ABSENT, self._on_lidar_obstacle_absent)
+        self._event_bus.subscribe(EventType.LIDAR_POINTS_UPDATED, self._on_lidar_points_updated)
         self._event_bus.subscribe(EventType.TARGET_OBJECT_SELECTED, self._on_target_object_selected)
         self._event_bus.subscribe(EventType.OBJECTS_DETECTED, self._on_objects_detected)
         self._event_bus.subscribe(EventType.OBJECT_WORLD_COORDINATES_UPDATED, self._on_object_world_coordinates_updated)
@@ -67,6 +69,7 @@ class Blackboard(metaclass=SingletonMeta):
         self._set(BlackboardDataKey.BEHAVIOUR_TREE_PAUSED, False)
         self._set(BlackboardDataKey.ROBOT_TRAIL, [])
         self._set(BlackboardDataKey.LLM_CHAT_LOG, [])
+        self._set(BlackboardDataKey.LIDAR_POINTS, {"points": []})
 
         self._robot_trail_max_length = 200
         self._robot_trail_min_distance = 0.05
@@ -333,6 +336,54 @@ class Blackboard(metaclass=SingletonMeta):
 
     def _on_lidar_obstacle_absent(self, event: DomainEvent):
         self._set(BlackboardDataKey.LIDAR_OBSTACLE_PRESENT, False)
+
+    def _on_lidar_points_updated(self, event: DomainEvent) -> None:
+        data = event.data or {}
+        raw_points = data.get("points")
+
+        sanitized_points: List[Dict[str, float]] = []
+        if isinstance(raw_points, list):
+            for point in raw_points:
+                if not isinstance(point, dict):
+                    continue
+
+                x = point.get("x")
+                y = point.get("y")
+                if x is None or y is None:
+                    continue
+
+                try:
+                    x_value = float(x)
+                    y_value = float(y)
+                except (TypeError, ValueError):
+                    continue
+
+                sanitized: Dict[str, float] = {"x": x_value, "y": y_value}
+
+                distance = point.get("distance")
+                if distance is not None:
+                    try:
+                        distance_value = float(distance)
+                    except (TypeError, ValueError):
+                        distance_value = None
+                    if distance_value is not None and math.isfinite(distance_value):
+                        sanitized["distance"] = distance_value
+
+                sanitized_points.append(sanitized)
+
+        timestamp = data.get("timestamp")
+        timestamp_value = None
+        if isinstance(timestamp, (int, float)) and math.isfinite(float(timestamp)):
+            timestamp_value = float(timestamp)
+
+        payload: Dict[str, Any] = {
+            "points": sanitized_points,
+            "frame_id": data.get("frame_id"),
+        }
+        if timestamp_value is not None:
+            payload["timestamp"] = timestamp_value
+
+        self._set(BlackboardDataKey.LIDAR_POINTS, payload)
 
     def _on_target_object_selected(self, event: DomainEvent):
         # data is of type DetectedObject in this case
