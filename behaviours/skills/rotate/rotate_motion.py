@@ -23,6 +23,8 @@ class RotateMotion(py_trees.behaviour.Behaviour):
         self._command = command
         self._angular_speed = abs(angular_speed)
         self._tolerance = math.radians(max(tolerance_deg, 0.0))
+        self._last_yaw: Optional[float] = None
+        self._travelled: float = 0.0
 
     def setup(self, twist: TwistWrapper, publisher) -> None:
         self._twist = twist
@@ -30,6 +32,8 @@ class RotateMotion(py_trees.behaviour.Behaviour):
 
     def initialise(self) -> None:
         self._halt_motion()
+        self._last_yaw = None
+        self._travelled = 0.0
 
     def update(self) -> Status:
         if any(value is None for value in (self._twist, self._publisher)):
@@ -50,15 +54,27 @@ class RotateMotion(py_trees.behaviour.Behaviour):
             return Status.RUNNING
 
         current_yaw = self._quaternion_to_yaw(orientation)
-        travelled = self._normalize_angle(current_yaw - start_yaw)
+        if self._last_yaw is None:
+            self._last_yaw = start_yaw
+
+        delta = self._normalize_angle(current_yaw - self._last_yaw)
+        if direction_sign * delta < 0.0:
+            delta = 0.0
+
+        self._travelled += delta
+        self._last_yaw = current_yaw
+
+        progress = direction_sign * self._travelled
+        if progress < 0.0:
+            progress = 0.0
 
         EventBus().publish(
-            DomainEvent(EventType.ROTATE_PROGRESS_UPDATED, abs(travelled))
+            DomainEvent(EventType.ROTATE_PROGRESS_UPDATED, min(progress, target_angle))
         )
 
-        if self._goal_reached(travelled, target_angle, direction_sign):
+        if self._goal_reached(progress, target_angle):
             self.logger.info(
-                f"Rotate goal reached (target: {math.degrees(target_angle):.1f} deg, travelled: {math.degrees(abs(travelled)):.1f} deg)"
+                f"Rotate goal reached (target: {math.degrees(target_angle):.1f} deg, travelled: {math.degrees(progress):.1f} deg)"
             )
             self._halt_motion()
             return Status.SUCCESS
@@ -92,8 +108,6 @@ class RotateMotion(py_trees.behaviour.Behaviour):
             angle += 2.0 * math.pi
         return angle
 
-    def _goal_reached(self, travelled: float, target: float, direction_sign: int) -> bool:
+    def _goal_reached(self, progress: float, target: float) -> bool:
         threshold = max(target - self._tolerance, 0.0)
-        if direction_sign >= 0:
-            return travelled >= threshold
-        return travelled <= -threshold
+        return progress >= threshold
