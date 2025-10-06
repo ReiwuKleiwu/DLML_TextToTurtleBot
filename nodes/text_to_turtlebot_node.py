@@ -21,6 +21,7 @@ from behaviours.conditions.check_lidar import CheckLidar
 from behaviours.conditions.navigation_goal_idle import NavigationGoalIdle
 from behaviours.user_command_executor import UserCommandExecutor
 from navigation.nav2_client import Nav2Client
+from navigation.docking_client import DockingClient
 from sensor_msgs.msg import LaserScan, Image, CameraInfo
 from std_msgs.msg import String
 from events.event_bus import EventBus
@@ -51,6 +52,7 @@ class TextToTurtlebotNode(Node):
         self._cmd_publisher = self.create_publisher(msg_type, f'{namespace}/cmd_vel', 10)
 
         self._nav_client = Nav2Client(self)
+        self._docking_client = DockingClient(self)
 
         self.map = Map(self)
         self._mission_board_server = MissionBoardServer(instruction_handler=self.submit_llm_instruction)
@@ -160,7 +162,12 @@ class TextToTurtlebotNode(Node):
         turn_around = TurnAround("TurnAround")
         turn_around.setup(self._twist, self._cmd_publisher)
 
-        user_command_executor = UserCommandExecutor("UserCommandExecutor", self._nav_client, self)
+        user_command_executor = UserCommandExecutor(
+            "UserCommandExecutor",
+            self._nav_client,
+            self._docking_client,
+            self,
+        )
         user_command_executor.setup(self._twist, self._cmd_publisher)
 
         obstacle_sequence.add_children([obstacle_detected, navigation_goal_idle, turn_around])

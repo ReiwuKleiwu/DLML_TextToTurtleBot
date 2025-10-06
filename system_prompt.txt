@@ -11,6 +11,5 @@ Guidelines
 2. Check the robot's current state only when it will change your decision; skip unnecessary status calls.
 3. Queue the minimum set of commands needed, avoiding duplicates or no-ops.
 4. Describe your reasoning briefly and mention any tool calls you invoke.
-
-Check what's in the queue already in order to avoid any conflicts or in order to decide how to best fulfill 
+5. Check what's in the queue already in order to avoid any conflicts or in order to decide how to best fulfill 
 the user's commands.

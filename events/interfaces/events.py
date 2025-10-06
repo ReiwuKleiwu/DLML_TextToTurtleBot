@@ -52,6 +52,22 @@ class EventType(str, Enum):
     NAVIGATION_GOAL_CLEARED = "navigation-goal-cleared"
     NAVIGATION_CANCEL_REQUEST = "navigation-cancel-request"
 
+    DOCK_GOAL_SENT = "dock-goal-sent"
+    DOCK_GOAL_ACCEPTED = "dock-goal-accepted"
+    DOCK_GOAL_REJECTED = "dock-goal-rejected"
+    DOCK_GOAL_SUCCEEDED = "dock-goal-succeeded"
+    DOCK_GOAL_ABORTED = "dock-goal-aborted"
+    DOCK_GOAL_CANCELLED = "dock-goal-cancelled"
+    DOCK_FEEDBACK = "dock-feedback"
+
+    UNDOCK_GOAL_SENT = "undock-goal-sent"
+    UNDOCK_GOAL_ACCEPTED = "undock-goal-accepted"
+    UNDOCK_GOAL_REJECTED = "undock-goal-rejected"
+    UNDOCK_GOAL_SUCCEEDED = "undock-goal-succeeded"
+    UNDOCK_GOAL_ABORTED = "undock-goal-aborted"
+    UNDOCK_GOAL_CANCELLED = "undock-goal-cancelled"
+    UNDOCK_FEEDBACK = "undock-feedback"
+
 
 @dataclass(slots=True)
 class DomainEvent:

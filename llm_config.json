@@ -1,16 +1,16 @@
 {
-  "default_provider": "openai",
+  "default_provider": "ollama",
   "max_iterations": 5,
   "adapters": {
     "ollama": {
-      "model": "qwen3:4b",
+      "model": "llama3.2:3b",
       "temperature": 0.3,
       "options": {
         "base_url": "http://localhost:11434"
       }
     },
     "openai": {
-      "model": "gpt-5-mini",
+      "model": "gpt-4.1-nano",
       "temperature": 0.6,
       "max_iterations": 60,
       "options": {

@@ -10,7 +10,10 @@ from behaviours.skills.drive.drive_skill import DriveSkill
 from behaviours.skills.rotate.rotate_skill import RotateSkill
 from behaviours.skills.navigate.navigate_skill import NavigateSkill
 from behaviours.skills.find_object.find_object_skill import FindObjectSkill
+from behaviours.skills.dock.dock_skill import DockSkill
+from behaviours.skills.dock.undock_skill import UndockSkill
 from navigation.nav2_client import Nav2Client
+from navigation.docking_client import DockingClient
 from rclpy.node import Node
 from events.event_bus import EventBus
 from events.interfaces.events import DomainEvent, EventType
@@ -20,7 +23,7 @@ from utils.twist_wrapper import TwistWrapper
 class UserCommandExecutor(py_trees.behaviour.Behaviour):
     """Dispatch user commands to the appropriate skill subtree."""
 
-    def __init__(self, name: str, nav_client: Nav2Client, node: Node) -> None:
+    def __init__(self, name: str, nav_client: Nav2Client, docking_client: DockingClient, node: Node) -> None:
         super().__init__(name)
         self._blackboard: Blackboard = Blackboard()
         self._event_bus: EventBus = EventBus()
@@ -29,6 +32,7 @@ class UserCommandExecutor(py_trees.behaviour.Behaviour):
         self._active_skill: Optional[py_trees.behaviour.Behaviour] = None
         self._active_command: Optional[UserCommand] = None
         self._nav_client = nav_client
+        self._docking_client = docking_client
         self._node = node
 
     def setup(
@@ -128,6 +132,20 @@ class UserCommandExecutor(py_trees.behaviour.Behaviour):
                     self._nav_client,
                     self._twist,
                     self._publisher,
+                )
+        elif next_command.command_type == CommandType.DOCK:
+            command = self._blackboard.pop_command()
+            if command is not None:
+                skill = DockSkill(
+                    f"DockSkill-{command.command_id[:8]}",
+                    self._docking_client,
+                )
+        elif next_command.command_type == CommandType.UNDOCK:
+            command = self._blackboard.pop_command()
+            if command is not None:
+                skill = UndockSkill(
+                    f"UndockSkill-{command.command_id[:8]}",
+                    self._docking_client,
                 )
         else:
             self.logger.warn(f"Unsupported command type: {next_command.command_type}")

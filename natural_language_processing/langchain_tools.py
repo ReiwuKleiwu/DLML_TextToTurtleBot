@@ -111,6 +111,24 @@ def queue_find_object_command(object_class: Any) -> str:
     )
 
 
+@tool("queue_dock_command")
+def queue_dock_command() -> str:
+    """Queue a dock command for the behaviour tree."""
+
+    command = UserCommand.dock()
+    _event_bus.publish(DomainEvent(EventType.COMMAND_RECEIVED, command))
+    return f"Queued dock command {command.command_id}."
+
+
+@tool("queue_undock_command")
+def queue_undock_command() -> str:
+    """Queue an undock command for the behaviour tree."""
+
+    command = UserCommand.undock()
+    _event_bus.publish(DomainEvent(EventType.COMMAND_RECEIVED, command))
+    return f"Queued undock command {command.command_id}."
+
+
 @tool("clear_command_queue")
 def clear_command_queue(confirm: Any = False) -> str:
     """Clear all pending commands and cancel the active command if present."""
@@ -207,6 +225,8 @@ LANGCHAIN_TOOLS = [
     queue_rotate_command,
     queue_navigate_command,
     queue_find_object_command,
+    queue_dock_command,
+    queue_undock_command,
     clear_command_queue,
     set_behaviour_tree_pause,
 ]

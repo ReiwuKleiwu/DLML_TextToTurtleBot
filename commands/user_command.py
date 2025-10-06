@@ -10,6 +10,8 @@ class CommandType(Enum):
     ROTATE = auto()
     DRIVE = auto()
     FIND_OBJECT = auto()
+    DOCK = auto()
+    UNDOCK = auto()
 
 
 @dataclass(frozen=True)
@@ -52,6 +54,14 @@ class UserCommand:
             parameters={"object_class": object_class},
         )
 
+    @classmethod
+    def dock(cls):
+        return cls(command_type=CommandType.DOCK)
+
+    @classmethod
+    def undock(cls):
+        return cls(command_type=CommandType.UNDOCK)
+
     def cleanup(self) -> None:
         """Reset any blackboard state associated with this command."""
         from events.event_bus import EventBus
@@ -72,3 +82,6 @@ class UserCommand:
             bus.publish(DomainEvent(EventType.TARGET_REACHED, False))
             bus.publish(DomainEvent(EventType.NAVIGATION_CANCEL_REQUEST, None))
             bus.publish(DomainEvent(EventType.NAVIGATION_GOAL_CLEARED, None))
+        elif self.command_type in {CommandType.DOCK, CommandType.UNDOCK}:
+            # Nothing to reset beyond the action client itself
+            pass
