@@ -38,3 +38,5 @@ class BlackboardDataKey(str, Enum):
 
     BEHAVIOUR_TREE_PAUSED = 'behaviour-tree-paused'
     LLM_CHAT_LOG = 'llm-chat-log'
+    LLM_CAPABILITIES = 'llm-capabilities'
+    LATEST_CAMERA_FRAME = 'latest-camera-frame'

@@ -1,5 +1,7 @@
 from typing import Any, Dict, List, Optional
 
+import time
+
 from events.event_bus import EventBus
 from events.interfaces.events import EventType, DomainEvent
 
@@ -19,6 +21,8 @@ class CameraProcessor:
         self._bridge = bridge
         self._object_detector = object_detector
         self._target_selector = target_selector
+        self._snapshot_interval_secs = 0.1
+        self._last_snapshot_ts = 0.0
     
     def handle(self, msg) -> None:
         cv_image = self._bridge.imgmsg_to_cv2(msg, desired_encoding='bgr8')
@@ -88,7 +92,16 @@ class CameraProcessor:
                             cv2.FONT_HERSHEY_SIMPLEX, 0.4, color, 1    
                 )
 
+        self._maybe_cache_frame(cv_image)
+
         cv2.imshow("TextToTurtlebot Camera", cv_image)
         cv2.waitKey(1)
 
+    def _maybe_cache_frame(self, image) -> None:
+        """Store a periodic snapshot of the RGB feed on the blackboard."""
+        now = time.time()
+        if now - self._last_snapshot_ts < self._snapshot_interval_secs:
+            return
 
+        self._blackboard.store_camera_frame(image.copy(), timestamp=now)
+        self._last_snapshot_ts = now

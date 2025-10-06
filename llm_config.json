@@ -1,5 +1,5 @@
 {
-  "default_provider": "ollama",
+  "default_provider": "openai",
   "max_iterations": 5,
   "adapters": {
     "ollama": {
@@ -7,6 +7,9 @@
       "temperature": 0.3,
       "options": {
         "base_url": "http://localhost:11434"
+      },
+      "capabilities": {
+        "input_modalities": ["text"]
       }
     },
     "openai": {
@@ -15,12 +18,18 @@
       "max_iterations": 60,
       "options": {
         "organization": "org-fRH94Fz4AYPn76fYf3pJ79k1"
+      },
+      "capabilities": {
+        "input_modalities": ["text", "image"]
       }
     },
     "gemini": {
       "model": "gemini-2.5-flash",
       "temperature": 0.1,
-      "options": {}
+      "options": {},
+      "capabilities": {
+        "input_modalities": ["text", "image"]
+      }
     }
   },
   "text_to_speech": {

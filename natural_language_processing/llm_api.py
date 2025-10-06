@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import base64
 import json
 import os
 from pathlib import Path
@@ -9,7 +10,9 @@ from langchain.agents import AgentExecutor, create_tool_calling_agent
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.tools import BaseTool
+from langchain.tools import tool
 
+from blackboard.blackboard import Blackboard
 from natural_language_processing.langchain_tools import LANGCHAIN_TOOLS
 from natural_language_processing.llm_adapters import (
     BaseLLMAdapter,
@@ -69,7 +72,6 @@ class LLMAPI:
         self._model_name = resolved_model_name
         self._temperature = resolved_temperature
         self._system_prompt_path = system_prompt_path or DEFAULT_PROMPT_PATH
-        self._tools: Sequence[BaseTool] = LANGCHAIN_TOOLS
         self._executor: Optional[AgentExecutor] = None
         self._adapter = self._initialise_adapter(
             provider_name,
@@ -77,6 +79,10 @@ class LLMAPI:
             merged_adapter_options,
         )
         self._max_iterations = self._resolve_max_iterations(provider_config)
+        self._blackboard = Blackboard()
+        self._capabilities = self._resolve_capabilities(provider_name, provider_config)
+        self._blackboard.set_llm_capabilities(self._capabilities)
+        self._tools = self._build_tools()
 
     # Public API -----------------------------------------------------------------
 
@@ -86,6 +92,68 @@ class LLMAPI:
     def get_tts_settings(self) -> TextToSpeechSettings:
         """Return the configured TTS settings."""
         return self._tts_settings
+
+    def get_capabilities(self) -> Dict[str, Any]:
+        """Expose a snapshot of the active LLM capabilities."""
+        return dict(self._capabilities)
+
+    @property
+    def supports_vision(self) -> bool:
+        """Return whether the active LLM can accept image inputs."""
+        return bool(self._capabilities.get("supports_vision", False))
+
+    def describe_image(self, image: Any, *, prompt: Optional[str] = None) -> str:
+        """Generate a description for the provided image using the active LLM."""
+        if not self.supports_vision:
+            raise RuntimeError("The configured LLM does not support vision input.")
+
+        if image is None:
+            raise ValueError("No image data provided for description.")
+
+        try:
+            import cv2
+        except ImportError as exc:  # pragma: no cover - dependency managed elsewhere
+            raise RuntimeError("OpenCV is required to encode camera frames for analysis.") from exc
+
+        success, buffer = cv2.imencode(".png", image)
+        if not success:
+            raise RuntimeError("Failed to encode camera frame to PNG format.")
+
+        encoded = base64.b64encode(buffer.tobytes()).decode("utf-8")
+
+        prompt_text = prompt or "Describe the scene shown in the provided camera frame."
+        provider_key = (self._provider_name or "").lower()
+
+        if provider_key in {"gemini", "google", "google_gemini"}:
+            content = [
+                {"type": "text", "text": prompt_text},
+                {
+                    "type": "input_image",
+                    "image": {
+                        "data": encoded,
+                        "mime_type": "image/png",
+                    },
+                },
+            ]
+        else:
+            content = [
+                {"type": "text", "text": prompt_text},
+                {
+                    "type": "image_url",
+                    "image_url": {"url": f"data:image/png;base64,{encoded}"},
+                },
+            ]
+
+        llm = self._adapter.create_llm()
+        response = llm.invoke([HumanMessage(content=content)])
+
+        if isinstance(response, AIMessage):
+            return self._extract_text(response.content)
+        if isinstance(response, str):
+            return response
+
+        text = getattr(response, "content", "")
+        return self._extract_text(text)
 
     def run(self, user_input: str, history: Optional[HistoryInput] = None) -> dict:
         """Execute the LLM agent with the provided input and optional history."""
@@ -131,6 +199,50 @@ class LLMAPI:
             max_iterations=self._max_iterations,
         )
         return self._executor
+
+    def _build_tools(self) -> Sequence[BaseTool]:
+        tools: List[BaseTool] = list(LANGCHAIN_TOOLS)
+        tools.append(self._build_capabilities_tool())
+        if self.supports_vision:
+            tools.append(self._build_camera_description_tool())
+        return tools
+
+    def _build_capabilities_tool(self) -> BaseTool:
+        @tool("get_llm_capabilities")
+        def _get_llm_capabilities() -> str:
+            """Return metadata describing the active LLM's capabilities."""
+
+            return json.dumps(self.get_capabilities())
+
+        return _get_llm_capabilities
+
+    def _build_camera_description_tool(self) -> BaseTool:
+        @tool("describe_current_view")
+        def _describe_current_view(
+            prompt: str = "Provide a concise description of the current camera view, noting obstacles and objects.",
+        ) -> str:
+            """Describe the latest cached camera frame using the LLM's vision capabilities."""
+
+            frame_entry = self._blackboard.get_latest_camera_frame()
+            if not frame_entry:
+                return "No camera frame available to describe."
+
+            image = frame_entry.get("image")
+            if image is None:
+                return "Camera frame payload is missing image data."
+
+            timestamp = frame_entry.get("timestamp")
+
+            try:
+                description = self.describe_image(image, prompt=prompt)
+            except Exception as exc:  # noqa: BLE001 - surface failure details to the agent
+                return f"Failed to describe camera view: {exc}"
+
+            if isinstance(timestamp, (int, float)):
+                return f"Frame timestamp {timestamp:.2f}: {description}"
+            return description
+
+        return _describe_current_view
 
     def _initialise_adapter(
         self,
@@ -208,6 +320,60 @@ class LLMAPI:
 
         return DEFAULT_MAX_ITERATIONS
 
+    def _resolve_capabilities(self, provider_name: str, provider_config: Dict[str, Any]) -> Dict[str, Any]:
+        capabilities = {
+            "provider": provider_name,
+            "model": self._model_name,
+            "supports_vision": False,
+            "supported_input_modalities": ["text"],
+        }
+
+        raw_capabilities = provider_config.get("capabilities") if isinstance(provider_config, dict) else None
+
+        if isinstance(raw_capabilities, dict):
+            input_modalities = raw_capabilities.get("input_modalities") or raw_capabilities.get("modalities")
+            if isinstance(input_modalities, list):
+                modalities = [
+                    str(item).lower()
+                    for item in input_modalities
+                    if isinstance(item, (str, bytes))
+                ]
+                if modalities:
+                    capabilities["supported_input_modalities"] = list(dict.fromkeys(modalities))
+                    if any(mod in {"image", "vision"} for mod in modalities):
+                        capabilities["supports_vision"] = True
+        elif isinstance(raw_capabilities, list):
+            modalities = [
+                str(item).lower()
+                for item in raw_capabilities
+                if isinstance(item, (str, bytes))
+            ]
+            if modalities:
+                capabilities["supported_input_modalities"] = list(dict.fromkeys(modalities))
+                if any(mod in {"image", "vision"} for mod in modalities):
+                    capabilities["supports_vision"] = True
+
+        if not capabilities["supports_vision"]:
+            if self._infer_vision_support(provider_name, self._model_name):
+                capabilities["supports_vision"] = True
+                modalities = list(capabilities.get("supported_input_modalities", []))
+                if "image" not in modalities:
+                    modalities.append("image")
+                capabilities["supported_input_modalities"] = modalities
+
+        return capabilities
+
+    @staticmethod
+    def _infer_vision_support(provider_name: str, model_name: str) -> bool:
+        provider_key = (provider_name or "").lower()
+        model_key = (model_name or "").lower()
+
+        if provider_key in {"gemini", "google", "google_gemini"}:
+            return True
+
+        vision_indicators = {"vision", "gpt-4o", "4.1", "omni", "multimodal"}
+        return any(indicator in model_key for indicator in vision_indicators)
+
     def _load_config(self, config_path: Optional[Path]) -> Dict[str, Any]:
         resolved_path = self._resolve_config_path(config_path)
         self._config_path: Optional[Path] = resolved_path
@@ -279,6 +445,27 @@ class LLMAPI:
         if override_options:
             merged.update(override_options)
         return merged
+
+    @staticmethod
+    def _extract_text(value: Any) -> str:
+        if value is None:
+            return ""
+        if isinstance(value, str):
+            return value
+        if isinstance(value, list):
+            parts: List[str] = []
+            for item in value:
+                if isinstance(item, dict):
+                    text_value = item.get("text") or item.get("value")
+                else:
+                    text_value = item
+                if text_value is None:
+                    continue
+                text_str = str(text_value).strip()
+                if text_str:
+                    parts.append(text_str)
+            return "\n".join(parts)
+        return str(value)
 
     def _load_system_prompt(self) -> str:
         prompt_path = self._system_prompt_path

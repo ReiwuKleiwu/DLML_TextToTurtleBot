@@ -70,6 +70,8 @@ class Blackboard(metaclass=SingletonMeta):
         self._set(BlackboardDataKey.ROBOT_TRAIL, [])
         self._set(BlackboardDataKey.LLM_CHAT_LOG, [])
         self._set(BlackboardDataKey.LIDAR_POINTS, {"points": []})
+        self._set(BlackboardDataKey.LLM_CAPABILITIES, {})
+        self._set(BlackboardDataKey.LATEST_CAMERA_FRAME, None)
 
         self._robot_trail_max_length = 200
         self._robot_trail_min_distance = 0.05
@@ -83,6 +85,35 @@ class Blackboard(metaclass=SingletonMeta):
 
     def get(self, key, default=None):
         return self.data.get(key, default)
+
+    def set_llm_capabilities(self, capabilities: Dict[str, Any]) -> None:
+        """Expose the active LLM capability metadata to other subsystems."""
+        snapshot = dict(capabilities or {})
+        with self._lock:
+            self._set(BlackboardDataKey.LLM_CAPABILITIES, snapshot)
+
+    def store_camera_frame(self, frame: Any, *, timestamp: Optional[float] = None) -> None:
+        """Cache the most recent RGB camera frame for downstream consumers."""
+        if frame is None:
+            return
+
+        payload = {
+            "image": frame,
+            "timestamp": timestamp if timestamp is not None else time.time(),
+        }
+
+        with self._lock:
+            self._set(BlackboardDataKey.LATEST_CAMERA_FRAME, payload)
+
+    def get_latest_camera_frame(self) -> Optional[Dict[str, Any]]:
+        """Return the most recent cached RGB frame metadata."""
+        with self._lock:
+            frame = self.data.get(BlackboardDataKey.LATEST_CAMERA_FRAME)
+
+        if frame is None or not isinstance(frame, dict):
+            return None
+
+        return frame.copy()
 
     # Behaviour tree control
 

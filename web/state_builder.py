@@ -49,6 +49,16 @@ class MissionBoardStateBuilder:
         navigation_status = navigation_snapshot.get("status")
         navigation_feedback = navigation_snapshot.get("feedback")
 
+        llm_capabilities = self._blackboard.get(BlackboardDataKey.LLM_CAPABILITIES, {}) or {}
+        latest_frame_entry = self._blackboard.get_latest_camera_frame()
+        latest_camera_metadata: Optional[Dict[str, Any]] = None
+        if isinstance(latest_frame_entry, dict):
+            timestamp = latest_frame_entry.get("timestamp")
+            if isinstance(timestamp, (int, float)):
+                latest_camera_metadata = {"timestamp": timestamp}
+            else:
+                latest_camera_metadata = {"timestamp": None}
+
         return {
             "timestamp": time.time(),
             "behaviour_tree_paused": self._blackboard.is_behaviour_tree_paused(),
@@ -73,6 +83,10 @@ class MissionBoardStateBuilder:
             "lidar": lidar_snapshot,
             "target_class": self._blackboard.get(BlackboardDataKey.TARGET_OBJECT_CLASS),
             "chat": chat_log,
+            "llm": {
+                "capabilities": llm_capabilities,
+                "latest_camera_frame": latest_camera_metadata,
+            },
         }
 
     def _serialize_vector3(self, vector: Any) -> Optional[Dict[str, float]]:
