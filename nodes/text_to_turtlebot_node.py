@@ -36,6 +36,7 @@ from langchain_core.messages import BaseMessage
 from web.mission_board_server import MissionBoardServer
 
 from perception.lidar.lidar_processor import LidarProcessor
+from perception.lidar.lidar_object_coordinate_processor import LidarObjectCoordinateProcessor
 
 class TextToTurtlebotNode(Node):
     def __init__(self, namespace: str = '', use_turtlebot_sim: bool = False) -> None:
@@ -80,10 +81,24 @@ class TextToTurtlebotNode(Node):
             self._target_selector
         )
 
-        self._depth_camera_processor = DepthCameraProcessor(
-            self._bridge,
-            self._tf_subscriber.tf_buffer,
-        )
+        coordinate_mode = "lidar"  # set to "lidar" to use LIDAR-based object coordinates
+        if coordinate_mode not in {"depth", "lidar"}:
+            coordinate_mode = "depth"
+        self._coordinate_mode = coordinate_mode
+        self.get_logger().info(f"Object coordinate mode: {self._coordinate_mode}")
+
+        self._depth_camera_processor: Optional[DepthCameraProcessor] = None
+        self._lidar_coordinate_processor: Optional[LidarObjectCoordinateProcessor] = None
+
+        if self._coordinate_mode == "depth":
+            self._depth_camera_processor = DepthCameraProcessor(
+                self._bridge,
+                self._tf_subscriber.tf_buffer,
+            )
+        else:
+            self._lidar_coordinate_processor = LidarObjectCoordinateProcessor(
+                self._tf_subscriber.tf_buffer,
+            )
 
         self._lidar_processor = LidarProcessor()
 
@@ -123,17 +138,18 @@ class TextToTurtlebotNode(Node):
         self.create_subscription(
             CameraInfo,
              f'{namespace}/oakd/rgb/preview/camera_info',
-            self._depth_camera_processor.set_camera_intrinsics,
+            self._handle_camera_info,
             10
         )
 
-        self.create_subscription(
-            Image,
-            f'{namespace}/oakd/stereo/image_raw' if not use_turtlebot_sim
-            else f'{namespace}/oakd/rgb/preview/depth',
-            self._depth_camera_processor.handle,
-            10
-        )
+        if self._depth_camera_processor is not None:
+            self.create_subscription(
+                Image,
+                f'{namespace}/oakd/stereo/image_raw' if not use_turtlebot_sim
+                else f'{namespace}/oakd/rgb/preview/depth',
+                self._depth_camera_processor.handle,
+                10
+            )
 
         self.create_subscription(
             LaserScan,
@@ -179,6 +195,12 @@ class TextToTurtlebotNode(Node):
         return
 
     # LLM agent handling
+
+    def _handle_camera_info(self, msg: CameraInfo) -> None:
+        if self._depth_camera_processor is not None:
+            self._depth_camera_processor.set_camera_intrinsics(msg)
+        if self._lidar_coordinate_processor is not None:
+            self._lidar_coordinate_processor.set_camera_intrinsics(msg)
 
     def submit_llm_instruction(self, instruction: str) -> None:
         """Queue a natural language instruction for the LLM controller."""
