@@ -16,9 +16,9 @@ class ImageDelayNode(Node):
         super().__init__('image_delay_node')
 
         # Declare configurable parameters
-        self.declare_parameter('input_topic', '/oakd/rgb/preview/image_raw')
-        self.declare_parameter('output_topic', '/oakd/rgb/preview/image_raw_delayed')
-        self.declare_parameter('delay_seconds', 3.0)
+        self.declare_parameter('input_topic', '/robot_1/oakd/rgb/preview/image_raw')
+        self.declare_parameter('output_topic', '/robot_1/oakd/rgb/preview/image_raw_delayed')
+        self.declare_parameter('delay_seconds', 0.01)
         self.declare_parameter('queue_limit', 100)
 
         # Cache parameter values

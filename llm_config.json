@@ -3,7 +3,7 @@
   "max_iterations": 5,
   "adapters": {
     "ollama": {
-      "model": "llama3.2:3b",
+      "model": "llama3.1:8b",
       "temperature": 0.3,
       "options": {
         "base_url": "http://localhost:11434"
@@ -33,7 +33,7 @@
     }
   },
   "text_to_speech": {
-    "enabled": false,
+    "enabled": true,
     "provider": "openai",
     "model": "gpt-4o-mini-tts",
     "voice": "ballad",

@@ -13,7 +13,7 @@ class RotateUntilTargetSeen(py_trees.behaviour.Behaviour):
         super().__init__(name)
         self._twist = twist
         self._publisher = publisher
-        self._angular_speed = 0.4
+        self._angular_speed = 0.05
         self._direction = 1
 
     def initialise(self) -> None:
@@ -23,6 +23,7 @@ class RotateUntilTargetSeen(py_trees.behaviour.Behaviour):
         self._publisher.publish(self._twist.get_message())
 
     def update(self) -> Status:
+        print("Rotating")
         self._twist.angular.z = self._angular_speed * self._direction
         self._publisher.publish(self._twist.get_message())
         return Status.RUNNING

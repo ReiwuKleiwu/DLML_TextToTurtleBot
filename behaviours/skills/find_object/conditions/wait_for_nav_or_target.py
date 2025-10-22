@@ -43,8 +43,5 @@ class WaitForNavOrTarget(py_trees.behaviour.Behaviour):
         self._target_reached = False
         self._cancel_requested = False
 
-    def _on_target_reached(self, event: DomainEvent) -> None:
-        if self.status == Status.INVALID:
-            return
-      
+    def _on_target_reached(self, event: DomainEvent) -> None:      
         self._target_reached = True

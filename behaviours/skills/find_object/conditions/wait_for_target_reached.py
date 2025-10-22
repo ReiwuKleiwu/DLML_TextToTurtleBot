@@ -36,7 +36,4 @@ class WaitForTargetReached(py_trees.behaviour.Behaviour):
         self._target_reached = False
 
     def _on_target_reached(self, event: DomainEvent) -> None:
-        if self.status == Status.INVALID:
-            return
-       
         self._target_reached = True

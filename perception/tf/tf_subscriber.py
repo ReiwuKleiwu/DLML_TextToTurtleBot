@@ -49,7 +49,6 @@ class TFSubscriber:
                 self.base_link_frame,
                 rclpy.time.Time()
             )
-
             self.previous_transform = self.latest_transform
             self.latest_transform = transform
 

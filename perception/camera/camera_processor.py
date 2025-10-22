@@ -25,7 +25,8 @@ class CameraProcessor:
         self._last_snapshot_ts = 0.0
     
     def handle(self, msg) -> None:
-        cv_image = self._bridge.imgmsg_to_cv2(msg, desired_encoding='bgr8')
+        # cv_image = self._bridge.imgmsg_to_cv2(msg, desired_encoding='bgr8')
+        cv_image = self._bridge.compressed_imgmsg_to_cv2(msg, desired_encoding='bgr8')
         camera_height, camera_width = cv_image.shape[:2]
 
         camera_resolution = self._blackboard.get(BlackboardDataKey.CAMERA_RESOLUTION)
@@ -43,8 +44,8 @@ class CameraProcessor:
 
         target_object_class = self._blackboard.get(BlackboardDataKey.TARGET_OBJECT_CLASS)
 
-        if target_object_class and target_object_class in detected_object_classes:
-            self._target_selector.select_target()
+        # if target_object_class and target_object_class in detected_object_classes:
+        self._target_selector.select_target()
 
         selected_target = self._blackboard.get(BlackboardDataKey.SELECTED_TARGET_OBJECT)
 

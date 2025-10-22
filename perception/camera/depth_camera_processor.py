@@ -65,6 +65,10 @@ class DepthCameraProcessor():
         detected_objects: Dict[str, List[DetectedObject]] = self._blackboard.get(BlackboardDataKey.DETECTED_OBJECTS, {})
         detected_object_classes = set(detected_objects.keys())
         detected_objects_with_coordinates = {}
+        # rgb_camera_width, rgb_camera_height = 640, 360
+
+        # scale_x = depth_image.shape[1] / rgb_camera_width
+        # scale_y = depth_image.shape[0] / rgb_camera_height
 
         if not self.intrinsics:
             return
@@ -72,7 +76,10 @@ class DepthCameraProcessor():
         for detected_object_class in detected_object_classes:
             for i, detected_object in enumerate(detected_objects[detected_object_class]):
                 # Bounding boxes are stored as top-left/bottom-right pixel coordinates
-                center_x = (detected_object.x1 + detected_object.x2) // 2
+                # center_x = int(((detected_object.x1 + detected_object.x2) / 2) * scale_x)
+                # center_y = int(((detected_object.y1 + detected_object.y2) / 2) * scale_y)
+
+                center_x = (detected_object.x1 + detected_object.x2) // 2 
                 center_y = (detected_object.y1 + detected_object.y2) // 2
 
                 if not (0 <= center_x < depth_image.shape[1] and 0 <= center_y < depth_image.shape[0]):

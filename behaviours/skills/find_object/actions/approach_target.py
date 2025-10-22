@@ -25,6 +25,7 @@ class ApproachTarget(py_trees.behaviour.Behaviour):
         self._target_reached = False
 
     def update(self) -> Status:
+        print("Approaching")
         if self._target_reached:
             self._stop()
             return Status.SUCCESS
@@ -37,7 +38,7 @@ class ApproachTarget(py_trees.behaviour.Behaviour):
             return Status.FAILURE
 
         self._twist.reset()
-        self._twist.linear.x = 0.2
+        self._twist.linear.x = 1.0
         self._publisher.publish(self._twist.get_message())
         return Status.RUNNING
 
@@ -45,10 +46,7 @@ class ApproachTarget(py_trees.behaviour.Behaviour):
         self._target_reached = False
         self._stop()
 
-    def _on_target_reached(self, event: DomainEvent) -> None:
-        if self.status == Status.INVALID:
-            return
-        
+    def _on_target_reached(self, event: DomainEvent) -> None:     
         self._target_reached = True
 
     def _stop(self) -> None:

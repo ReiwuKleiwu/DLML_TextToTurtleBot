@@ -19,13 +19,16 @@ class AlignToTarget(py_trees.behaviour.Behaviour):
         self._tolerance = 20.0
 
     def update(self) -> Status:
+        print("Aligning")
         self._camera_resolution = self._blackboard.get(BlackboardDataKey.CAMERA_RESOLUTION)
+
         if not self._camera_resolution:
             return Status.RUNNING
         
         image_center = self._camera_resolution['width'] / 2
 
         selected_object: DetectedObject = self._blackboard.get(BlackboardDataKey.SELECTED_TARGET_OBJECT)
+
         if not selected_object:
             self._stop()
             return Status.FAILURE
@@ -34,6 +37,7 @@ class AlignToTarget(py_trees.behaviour.Behaviour):
         selected_object_bb_center = selected_object.x1 + (selected_object_bb_width / 2)
 
         error = selected_object_bb_center - image_center
+        print(error)
 
         if abs(error) <= self._tolerance:
             self._stop()
@@ -41,7 +45,8 @@ class AlignToTarget(py_trees.behaviour.Behaviour):
 
         normalized_turn_direction = self._map_to_minus1_to_1(error, -self._camera_resolution['width']/2, self._camera_resolution['width']/2)
         self._twist.reset()
-        self._twist.angular.z = -1 * normalized_turn_direction
+        print(normalized_turn_direction)
+        self._twist.angular.z = -0.1 * normalized_turn_direction
         self._publisher.publish(self._twist.get_message())
         return Status.RUNNING
 

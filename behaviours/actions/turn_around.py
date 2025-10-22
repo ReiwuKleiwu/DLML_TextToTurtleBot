@@ -14,6 +14,6 @@ class TurnAround(Behaviour):
 
     def update(self) -> Status:
         self.twist.reset()
-        self.twist.angular.z = 1.0
+        self.twist.angular.z = 0.08
         self.publisher.publish(self.twist.get_message())
         return Status.RUNNING
