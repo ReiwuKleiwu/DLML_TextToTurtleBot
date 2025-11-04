@@ -1,12 +1,15 @@
-numpy
+typeguard
+numpy < 2
 py_trees
 rclpy
 ultralytics
-langchain
+git+https://github.com/ultralytics/CLIP.git
+langchain < 1
 pydantic
-langchain-google-genai
-langchain-ollama
-langchain-openai
+langchain-google-genai < 1
+langchain-ollama < 1
+langchain-openai < 1
 fastapi
 uvicorn
 openai
+pyrealsense2
