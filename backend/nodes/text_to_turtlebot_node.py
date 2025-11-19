@@ -33,10 +33,11 @@ from natural_language_processing.text_to_speech import (
     TextToSpeechService,
 )
 from langchain_core.messages import BaseMessage
-from web.mission_board_server import MissionBoardServer
 
 from perception.lidar.lidar_processor import LidarProcessor
 from perception.lidar.lidar_object_coordinate_processor import LidarObjectCoordinateProcessor
+
+from std_msgs.msg import String
 
 class TextToTurtlebotNode(Node):
     def __init__(self, namespace: str = '', use_turtlebot_sim: bool = False) -> None:
@@ -51,13 +52,12 @@ class TextToTurtlebotNode(Node):
         self._twist = TwistWrapper(use_stamped=use_turtlebot_sim)
         msg_type = TwistStamped if use_turtlebot_sim else Twist
         self._cmd_publisher = self.create_publisher(msg_type, f'{namespace}/cmd_vel', 10)
+        self._blackboard_publisher = self.create_publisher(String, f'{namespace}/blackboard', 10)
 
         self._nav_client = Nav2Client(self)
         self._docking_client = DockingClient(self)
 
         self.map = Map(self)
-        self._mission_board_server = MissionBoardServer(instruction_handler=self.submit_llm_instruction)
-        self._mission_board_server.start()
 
         self._tf_subscriber = TFSubscriber(self, base_link_frame="base_link")
 
@@ -124,8 +124,15 @@ class TextToTurtlebotNode(Node):
             daemon=True,
         )
 
+        self._blackboard_thread = threading.Thread(
+            target=self._run_blackboard_loop,
+            name="blackboard-loop",
+            daemon=True,
+        )
+
         self._tick_thread.start()
         self._llm_thread.start()
+        self._blackboard_thread.start()
 
 
         self.create_subscription(
@@ -248,6 +255,11 @@ class TextToTurtlebotNode(Node):
                     f"LLM processing failed: {exc}",
                     metadata={"error": True},
                 )
+
+    def _run_blackboard_loop(self) -> None:
+        while not self._shutdown_event.is_set():
+            self._blackboard.publish(self._blackboard_publisher)
+            time.sleep(0.25)
 
     def _maybe_generate_tts_metadata(self, response_text: str) -> Optional[Dict[str, Any]]:
         """Convert the assistant response to speech when enabled."""
