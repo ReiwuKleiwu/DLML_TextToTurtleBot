@@ -1,5 +1,5 @@
 import rclpy
-from nodes.text_to_turtlebot_node import TextToTurtlebotNode
+from backend.nodes.text_to_turtlebot_node import TextToTurtlebotNode
 
 def main(args=None):
     rclpy.init(args=args)

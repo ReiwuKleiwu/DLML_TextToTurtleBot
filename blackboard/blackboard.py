@@ -5,53 +5,55 @@ from threading import RLock
 import math
 import time
 
+from utils.singleton_meta import SingletonMeta
+from events.event_bus import EventBus
+from events.interfaces.events import DomainEvent, EventType
 from blackboard.interfaces.blackboard_data_keys import BlackboardDataKey
 from commands.user_command import UserCommand
 from std_msgs.msg import String
-from utils.singleton_meta import SingletonMeta
 import pickle
 import base64
 
 # The blackboard acts as a central hub for all the information the robot perceives
 class Blackboard(metaclass=SingletonMeta):
     def __init__(self):
-        # self._event_bus = EventBus()
+        self._event_bus = EventBus()
         self.data = {}
 
         # Internal command queue storage (FIFO)
         self._command_queue: Deque[UserCommand] = deque()
         self._lock = RLock()
 
-        # self._event_bus.subscribe(EventType.LIDAR_OBSTACLE_PRESENT, self._on_lidar_obstacle_present)
-        # self._event_bus.subscribe(EventType.LIDAR_OBSTACLE_ABSENT, self._on_lidar_obstacle_absent)
-        # self._event_bus.subscribe(EventType.LIDAR_POINTS_UPDATED, self._on_lidar_points_updated)
-        # self._event_bus.subscribe(EventType.TARGET_OBJECT_SELECTED, self._on_target_object_selected)
-        # self._event_bus.subscribe(EventType.OBJECTS_DETECTED, self._on_objects_detected)
-        # self._event_bus.subscribe(EventType.OBJECT_WORLD_COORDINATES_UPDATED, self._on_object_world_coordinates_updated)
-        # self._event_bus.subscribe(EventType.ROBOT_POSITION_UPDATED, self._on_robot_position_updated)
-        # self._event_bus.subscribe(EventType.ROBOT_ORIENTATION_UPDATED, self._on_robot_orientation_updated)
-        # self._event_bus.subscribe(EventType.MAP_UPDATED, self._on_map_updated)
-        # self._event_bus.subscribe(EventType.TARGET_REACHED, self._on_target_reached)
-        # self._event_bus.subscribe(EventType.COMMAND_RECEIVED, self._on_command_received)
-        # self._event_bus.subscribe(EventType.COMMAND_STARTED, self._on_command_started)
-        # self._event_bus.subscribe(EventType.COMMAND_COMPLETED, self._on_command_completed)
-        # self._event_bus.subscribe(EventType.COMMAND_CANCELLED, self._on_command_cancelled)
-        # self._event_bus.subscribe(EventType.DRIVE_GOAL_SET, self._on_drive_goal_set)
-        # self._event_bus.subscribe(EventType.DRIVE_PROGRESS_UPDATED, self._on_drive_progress_updated)
-        # self._event_bus.subscribe(EventType.DRIVE_GOAL_CLEARED, self._on_drive_goal_cleared)
-        # self._event_bus.subscribe(EventType.ROTATE_GOAL_SET, self._on_rotate_goal_set)
-        # self._event_bus.subscribe(EventType.ROTATE_PROGRESS_UPDATED, self._on_rotate_progress_updated)
-        # self._event_bus.subscribe(EventType.ROTATE_GOAL_CLEARED, self._on_rotate_goal_cleared)
-        # self._event_bus.subscribe(EventType.NAVIGATION_GOAL_SENT, self._on_navigation_goal_sent)
-        # self._event_bus.subscribe(EventType.NAVIGATION_GOAL_ACCEPTED, self._on_navigation_goal_accepted)
-        # self._event_bus.subscribe(EventType.NAVIGATION_GOAL_REJECTED, self._on_navigation_goal_rejected)
-        # self._event_bus.subscribe(EventType.NAVIGATION_GOAL_SUCCEEDED, self._on_navigation_goal_succeeded)
-        # self._event_bus.subscribe(EventType.NAVIGATION_GOAL_ABORTED, self._on_navigation_goal_aborted)
-        # self._event_bus.subscribe(EventType.NAVIGATION_GOAL_CANCELLED, self._on_navigation_goal_cancelled)
-        # self._event_bus.subscribe(EventType.NAVIGATION_FEEDBACK, self._on_navigation_feedback)
-        # self._event_bus.subscribe(EventType.NAVIGATION_GOAL_CLEARED, self._on_navigation_goal_cleared)
-        # self._event_bus.subscribe(EventType.TARGET_OBJECT_CLASS_SET, self._on_target_object_class_set)
-        # self._event_bus.subscribe(EventType.CAMERA_RESOLUTION_SET, self._on_camera_resolution_set)
+        self._event_bus.subscribe(EventType.LIDAR_OBSTACLE_PRESENT, self._on_lidar_obstacle_present)
+        self._event_bus.subscribe(EventType.LIDAR_OBSTACLE_ABSENT, self._on_lidar_obstacle_absent)
+        self._event_bus.subscribe(EventType.LIDAR_POINTS_UPDATED, self._on_lidar_points_updated)
+        self._event_bus.subscribe(EventType.TARGET_OBJECT_SELECTED, self._on_target_object_selected)
+        self._event_bus.subscribe(EventType.OBJECTS_DETECTED, self._on_objects_detected)
+        self._event_bus.subscribe(EventType.OBJECT_WORLD_COORDINATES_UPDATED, self._on_object_world_coordinates_updated)
+        self._event_bus.subscribe(EventType.ROBOT_POSITION_UPDATED, self._on_robot_position_updated)
+        self._event_bus.subscribe(EventType.ROBOT_ORIENTATION_UPDATED, self._on_robot_orientation_updated)
+        self._event_bus.subscribe(EventType.MAP_UPDATED, self._on_map_updated)
+        self._event_bus.subscribe(EventType.TARGET_REACHED, self._on_target_reached)
+        self._event_bus.subscribe(EventType.COMMAND_RECEIVED, self._on_command_received)
+        self._event_bus.subscribe(EventType.COMMAND_STARTED, self._on_command_started)
+        self._event_bus.subscribe(EventType.COMMAND_COMPLETED, self._on_command_completed)
+        self._event_bus.subscribe(EventType.COMMAND_CANCELLED, self._on_command_cancelled)
+        self._event_bus.subscribe(EventType.DRIVE_GOAL_SET, self._on_drive_goal_set)
+        self._event_bus.subscribe(EventType.DRIVE_PROGRESS_UPDATED, self._on_drive_progress_updated)
+        self._event_bus.subscribe(EventType.DRIVE_GOAL_CLEARED, self._on_drive_goal_cleared)
+        self._event_bus.subscribe(EventType.ROTATE_GOAL_SET, self._on_rotate_goal_set)
+        self._event_bus.subscribe(EventType.ROTATE_PROGRESS_UPDATED, self._on_rotate_progress_updated)
+        self._event_bus.subscribe(EventType.ROTATE_GOAL_CLEARED, self._on_rotate_goal_cleared)
+        self._event_bus.subscribe(EventType.NAVIGATION_GOAL_SENT, self._on_navigation_goal_sent)
+        self._event_bus.subscribe(EventType.NAVIGATION_GOAL_ACCEPTED, self._on_navigation_goal_accepted)
+        self._event_bus.subscribe(EventType.NAVIGATION_GOAL_REJECTED, self._on_navigation_goal_rejected)
+        self._event_bus.subscribe(EventType.NAVIGATION_GOAL_SUCCEEDED, self._on_navigation_goal_succeeded)
+        self._event_bus.subscribe(EventType.NAVIGATION_GOAL_ABORTED, self._on_navigation_goal_aborted)
+        self._event_bus.subscribe(EventType.NAVIGATION_GOAL_CANCELLED, self._on_navigation_goal_cancelled)
+        self._event_bus.subscribe(EventType.NAVIGATION_FEEDBACK, self._on_navigation_feedback)
+        self._event_bus.subscribe(EventType.NAVIGATION_GOAL_CLEARED, self._on_navigation_goal_cleared)
+        self._event_bus.subscribe(EventType.TARGET_OBJECT_CLASS_SET, self._on_target_object_class_set)
+        self._event_bus.subscribe(EventType.CAMERA_RESOLUTION_SET, self._on_camera_resolution_set)
 
         self._set(BlackboardDataKey.TARGET_OBJECT_CLASS, None)
         self._set(BlackboardDataKey.COMMAND_QUEUE, [])
@@ -210,235 +212,235 @@ class Blackboard(metaclass=SingletonMeta):
                     return command
         return None
     
-    # ### Event Handlers ###
+    ### Event Handlers ###
 
-    # def _on_command_started(self, event: DomainEvent):
-    #     # data is of type UserCommand
-    #     command = event.data
-    #     if not isinstance(command, UserCommand):
-    #         return
+    def _on_command_started(self, event: DomainEvent):
+        # data is of type UserCommand
+        command = event.data
+        if not isinstance(command, UserCommand):
+            return
 
-    #     print(f"Command started: {command.command_id}")
+        print(f"Command started: {command.command_id}")
 
-    #     # Remove from pending queue if it was still there and mark active
-    #     self._remove_command_by_id(command.command_id)
-    #     self.set_active_command(command)
+        # Remove from pending queue if it was still there and mark active
+        self._remove_command_by_id(command.command_id)
+        self.set_active_command(command)
 
-    # def _on_command_completed(self, event: DomainEvent):
-    #     # data is of type UserCommand
-    #     active_command: Optional[UserCommand] = self.get(BlackboardDataKey.ACTIVE_COMMAND)
-    #     command = event.data
+    def _on_command_completed(self, event: DomainEvent):
+        # data is of type UserCommand
+        active_command: Optional[UserCommand] = self.get(BlackboardDataKey.ACTIVE_COMMAND)
+        command = event.data
 
-    #     if not isinstance(command, UserCommand):
-    #         return
+        if not isinstance(command, UserCommand):
+            return
         
-    #     print(f"Command completed: {command.command_id}")
+        print(f"Command completed: {command.command_id}")
 
-    #     if active_command and active_command.command_id == command.command_id:
-    #         command.cleanup()
-    #         self.set_active_command(None)
+        if active_command and active_command.command_id == command.command_id:
+            command.cleanup()
+            self.set_active_command(None)
 
-    # def _on_command_cancelled(self, event: DomainEvent):
-    #     # data is of type UserCommand
-    #     active_command: Optional[UserCommand] = self.get(BlackboardDataKey.ACTIVE_COMMAND)
-    #     command = event.data
+    def _on_command_cancelled(self, event: DomainEvent):
+        # data is of type UserCommand
+        active_command: Optional[UserCommand] = self.get(BlackboardDataKey.ACTIVE_COMMAND)
+        command = event.data
 
-    #     if not isinstance(command, UserCommand):
-    #         return
+        if not isinstance(command, UserCommand):
+            return
 
-    #     # This should theoretically never happen, but just in case
-    #     if active_command and active_command.command_id == command.command_id:
-    #         self.cancel_active_command()
-    #     else:
-    #         self._remove_command_by_id(command.command_id)
-    #         command.cleanup()
+        # This should theoretically never happen, but just in case
+        if active_command and active_command.command_id == command.command_id:
+            self.cancel_active_command()
+        else:
+            self._remove_command_by_id(command.command_id)
+            command.cleanup()
 
-    # def _on_command_received(self, event: DomainEvent):
-    #     # data is of type UserCommand
-    #     command = event.data
-    #     if not isinstance(command, UserCommand):
-    #         return
-    #     self.enqueue_command(command)
+    def _on_command_received(self, event: DomainEvent):
+        # data is of type UserCommand
+        command = event.data
+        if not isinstance(command, UserCommand):
+            return
+        self.enqueue_command(command)
 
-    # def _on_drive_goal_set(self, event: DomainEvent) -> None:
-    #     # data is of type Dict[str, Any] with keys target_distance, start_pose, direction_sign
-    #     data = event.data or {}
-    #     target_distance = data.get("target_distance")
-    #     start_pose = data.get("start_pose")
-    #     direction_sign = data.get("direction_sign")
+    def _on_drive_goal_set(self, event: DomainEvent) -> None:
+        # data is of type Dict[str, Any] with keys target_distance, start_pose, direction_sign
+        data = event.data or {}
+        target_distance = data.get("target_distance")
+        start_pose = data.get("start_pose")
+        direction_sign = data.get("direction_sign")
 
-    #     if target_distance is None or start_pose is None or direction_sign is None:
-    #         return
+        if target_distance is None or start_pose is None or direction_sign is None:
+            return
 
-    #     self._set(BlackboardDataKey.DRIVE_TARGET_DISTANCE, target_distance)
-    #     self._set(BlackboardDataKey.DRIVE_START_POSE, start_pose)
-    #     self._set(BlackboardDataKey.DRIVE_DIRECTION_SIGN, direction_sign)
-    #     self._set(BlackboardDataKey.DRIVE_DISTANCE_TRAVELLED, 0.0)
+        self._set(BlackboardDataKey.DRIVE_TARGET_DISTANCE, target_distance)
+        self._set(BlackboardDataKey.DRIVE_START_POSE, start_pose)
+        self._set(BlackboardDataKey.DRIVE_DIRECTION_SIGN, direction_sign)
+        self._set(BlackboardDataKey.DRIVE_DISTANCE_TRAVELLED, 0.0)
 
-    # def _on_drive_progress_updated(self, event: DomainEvent) -> None:
-    #     # data is of type float (distance in meters)
-    #     distance = event.data
-    #     if distance is None:
-    #         return
-    #     self._set(BlackboardDataKey.DRIVE_DISTANCE_TRAVELLED, distance)
+    def _on_drive_progress_updated(self, event: DomainEvent) -> None:
+        # data is of type float (distance in meters)
+        distance = event.data
+        if distance is None:
+            return
+        self._set(BlackboardDataKey.DRIVE_DISTANCE_TRAVELLED, distance)
 
-    # def _on_drive_goal_cleared(self, event: DomainEvent) -> None:
-    #     # data is None
-    #     self._set(BlackboardDataKey.DRIVE_TARGET_DISTANCE, None)
-    #     self._set(BlackboardDataKey.DRIVE_START_POSE, None)
-    #     self._set(BlackboardDataKey.DRIVE_DIRECTION_SIGN, None)
-    #     self._set(BlackboardDataKey.DRIVE_DISTANCE_TRAVELLED, 0.0)
+    def _on_drive_goal_cleared(self, event: DomainEvent) -> None:
+        # data is None
+        self._set(BlackboardDataKey.DRIVE_TARGET_DISTANCE, None)
+        self._set(BlackboardDataKey.DRIVE_START_POSE, None)
+        self._set(BlackboardDataKey.DRIVE_DIRECTION_SIGN, None)
+        self._set(BlackboardDataKey.DRIVE_DISTANCE_TRAVELLED, 0.0)
 
-    # def _on_rotate_goal_set(self, event: DomainEvent) -> None:
-    #     # data is of type Dict[str, Any] with keys target_angle, start_yaw, direction_sign
-    #     data = event.data or {}
-    #     target_angle = data.get("target_angle")
-    #     start_yaw = data.get("start_yaw")
-    #     direction_sign = data.get("direction_sign")
+    def _on_rotate_goal_set(self, event: DomainEvent) -> None:
+        # data is of type Dict[str, Any] with keys target_angle, start_yaw, direction_sign
+        data = event.data or {}
+        target_angle = data.get("target_angle")
+        start_yaw = data.get("start_yaw")
+        direction_sign = data.get("direction_sign")
 
-    #     if target_angle is None or start_yaw is None or direction_sign is None:
-    #         return
+        if target_angle is None or start_yaw is None or direction_sign is None:
+            return
 
-    #     self._set(BlackboardDataKey.ROTATE_TARGET_ANGLE, target_angle)
-    #     self._set(BlackboardDataKey.ROTATE_START_YAW, start_yaw)
-    #     self._set(BlackboardDataKey.ROTATE_DIRECTION_SIGN, direction_sign)
-    #     self._set(BlackboardDataKey.ROTATE_ANGLE_TRAVELLED, 0.0)
+        self._set(BlackboardDataKey.ROTATE_TARGET_ANGLE, target_angle)
+        self._set(BlackboardDataKey.ROTATE_START_YAW, start_yaw)
+        self._set(BlackboardDataKey.ROTATE_DIRECTION_SIGN, direction_sign)
+        self._set(BlackboardDataKey.ROTATE_ANGLE_TRAVELLED, 0.0)
 
-    # def _on_rotate_progress_updated(self, event: DomainEvent) -> None:
-    #     # data is of type float (angle in radians)
-    #     angle = event.data
-    #     if angle is None:
-    #         return
-    #     self._set(BlackboardDataKey.ROTATE_ANGLE_TRAVELLED, angle)
+    def _on_rotate_progress_updated(self, event: DomainEvent) -> None:
+        # data is of type float (angle in radians)
+        angle = event.data
+        if angle is None:
+            return
+        self._set(BlackboardDataKey.ROTATE_ANGLE_TRAVELLED, angle)
 
-    # def _on_rotate_goal_cleared(self, event: DomainEvent) -> None:
-    #     # data is None
-    #     self._set(BlackboardDataKey.ROTATE_TARGET_ANGLE, None)
-    #     self._set(BlackboardDataKey.ROTATE_START_YAW, None)
-    #     self._set(BlackboardDataKey.ROTATE_DIRECTION_SIGN, None)
-    #     self._set(BlackboardDataKey.ROTATE_ANGLE_TRAVELLED, 0.0)
+    def _on_rotate_goal_cleared(self, event: DomainEvent) -> None:
+        # data is None
+        self._set(BlackboardDataKey.ROTATE_TARGET_ANGLE, None)
+        self._set(BlackboardDataKey.ROTATE_START_YAW, None)
+        self._set(BlackboardDataKey.ROTATE_DIRECTION_SIGN, None)
+        self._set(BlackboardDataKey.ROTATE_ANGLE_TRAVELLED, 0.0)
 
-    # def _on_navigation_goal_sent(self, event: DomainEvent):
-    #     # data is of type geometry_msgs.msg.PoseStamped
-    #     goal = event.data
-    #     self._set(BlackboardDataKey.NAVIGATION_CURRENT_GOAL, goal)
-    #     self._set(BlackboardDataKey.NAVIGATION_STATUS, "sent")
+    def _on_navigation_goal_sent(self, event: DomainEvent):
+        # data is of type geometry_msgs.msg.PoseStamped
+        goal = event.data
+        self._set(BlackboardDataKey.NAVIGATION_CURRENT_GOAL, goal)
+        self._set(BlackboardDataKey.NAVIGATION_STATUS, "sent")
 
-    # def _on_navigation_goal_accepted(self, event: DomainEvent):
-    #     # data is of type geometry_msgs.msg.PoseStamped
-    #     goal = event.data
-    #     self._set(BlackboardDataKey.NAVIGATION_CURRENT_GOAL, goal)
-    #     self._set(BlackboardDataKey.NAVIGATION_STATUS, "accepted")
+    def _on_navigation_goal_accepted(self, event: DomainEvent):
+        # data is of type geometry_msgs.msg.PoseStamped
+        goal = event.data
+        self._set(BlackboardDataKey.NAVIGATION_CURRENT_GOAL, goal)
+        self._set(BlackboardDataKey.NAVIGATION_STATUS, "accepted")
 
-    # def _on_navigation_goal_rejected(self, event: DomainEvent):
-    #     # data is of type geometry_msgs.msg.PoseStamped or None
-    #     self._set(BlackboardDataKey.NAVIGATION_STATUS, "rejected")
+    def _on_navigation_goal_rejected(self, event: DomainEvent):
+        # data is of type geometry_msgs.msg.PoseStamped or None
+        self._set(BlackboardDataKey.NAVIGATION_STATUS, "rejected")
 
-    # def _on_navigation_goal_succeeded(self, event: DomainEvent):
-    #     # data is of type geometry_msgs.msg.PoseStamped or None
-    #     goal = event.data
-    #     if goal is not None:
-    #         self._set(BlackboardDataKey.NAVIGATION_CURRENT_GOAL, goal)
-    #     self._set(BlackboardDataKey.NAVIGATION_STATUS, "succeeded")
+    def _on_navigation_goal_succeeded(self, event: DomainEvent):
+        # data is of type geometry_msgs.msg.PoseStamped or None
+        goal = event.data
+        if goal is not None:
+            self._set(BlackboardDataKey.NAVIGATION_CURRENT_GOAL, goal)
+        self._set(BlackboardDataKey.NAVIGATION_STATUS, "succeeded")
 
-    # def _on_navigation_goal_aborted(self, event: DomainEvent):
-    #     # data is of type geometry_msgs.msg.PoseStamped or None
-    #     self._set(BlackboardDataKey.NAVIGATION_STATUS, "aborted")
+    def _on_navigation_goal_aborted(self, event: DomainEvent):
+        # data is of type geometry_msgs.msg.PoseStamped or None
+        self._set(BlackboardDataKey.NAVIGATION_STATUS, "aborted")
 
-    # def _on_navigation_goal_cancelled(self, event: DomainEvent):
-    #     # data is of type geometry_msgs.msg.PoseStamped or None
-    #     self._set(BlackboardDataKey.NAVIGATION_STATUS, "cancelled")
+    def _on_navigation_goal_cancelled(self, event: DomainEvent):
+        # data is of type geometry_msgs.msg.PoseStamped or None
+        self._set(BlackboardDataKey.NAVIGATION_STATUS, "cancelled")
 
-    # def _on_navigation_feedback(self, event: DomainEvent):
-    #     # data is of type nav2_msgs.action.NavigateToPose.Feedback
-    #     self._set(BlackboardDataKey.NAVIGATION_FEEDBACK, event.data)
+    def _on_navigation_feedback(self, event: DomainEvent):
+        # data is of type nav2_msgs.action.NavigateToPose.Feedback
+        self._set(BlackboardDataKey.NAVIGATION_FEEDBACK, event.data)
 
-    # def _on_navigation_goal_cleared(self, event: DomainEvent):
-    #     # data is None
-    #     self._set(BlackboardDataKey.NAVIGATION_CURRENT_GOAL, None)
-    #     self._set(BlackboardDataKey.NAVIGATION_STATUS, None)
-    #     self._set(BlackboardDataKey.NAVIGATION_FEEDBACK, None)
+    def _on_navigation_goal_cleared(self, event: DomainEvent):
+        # data is None
+        self._set(BlackboardDataKey.NAVIGATION_CURRENT_GOAL, None)
+        self._set(BlackboardDataKey.NAVIGATION_STATUS, None)
+        self._set(BlackboardDataKey.NAVIGATION_FEEDBACK, None)
 
-    # def _on_target_object_class_set(self, event: DomainEvent):
-    #     # data is of type str or None
-    #     self._set(BlackboardDataKey.TARGET_OBJECT_CLASS, event.data)
+    def _on_target_object_class_set(self, event: DomainEvent):
+        # data is of type str or None
+        self._set(BlackboardDataKey.TARGET_OBJECT_CLASS, event.data)
 
-    # def _on_lidar_obstacle_present(self, event: DomainEvent):
-    #     self._set(BlackboardDataKey.LIDAR_OBSTACLE_PRESENT, True)
+    def _on_lidar_obstacle_present(self, event: DomainEvent):
+        self._set(BlackboardDataKey.LIDAR_OBSTACLE_PRESENT, True)
 
-    # def _on_lidar_obstacle_absent(self, event: DomainEvent):
-    #     self._set(BlackboardDataKey.LIDAR_OBSTACLE_PRESENT, False)
+    def _on_lidar_obstacle_absent(self, event: DomainEvent):
+        self._set(BlackboardDataKey.LIDAR_OBSTACLE_PRESENT, False)
 
-    # def _on_lidar_points_updated(self, event: DomainEvent) -> None:
-    #     data = event.data or {}
-    #     raw_points = data.get("points")
+    def _on_lidar_points_updated(self, event: DomainEvent) -> None:
+        data = event.data or {}
+        raw_points = data.get("points")
 
-    #     sanitized_points: List[Dict[str, float]] = []
-    #     if isinstance(raw_points, list):
-    #         for point in raw_points:
-    #             if not isinstance(point, dict):
-    #                 continue
+        sanitized_points: List[Dict[str, float]] = []
+        if isinstance(raw_points, list):
+            for point in raw_points:
+                if not isinstance(point, dict):
+                    continue
 
-    #             x = point.get("x")
-    #             y = point.get("y")
-    #             if x is None or y is None:
-    #                 continue
+                x = point.get("x")
+                y = point.get("y")
+                if x is None or y is None:
+                    continue
 
-    #             try:
-    #                 x_value = float(x)
-    #                 y_value = float(y)
-    #             except (TypeError, ValueError):
-    #                 continue
+                try:
+                    x_value = float(x)
+                    y_value = float(y)
+                except (TypeError, ValueError):
+                    continue
 
-    #             sanitized: Dict[str, float] = {"x": x_value, "y": y_value}
+                sanitized: Dict[str, float] = {"x": x_value, "y": y_value}
 
-    #             distance = point.get("distance")
-    #             if distance is not None:
-    #                 try:
-    #                     distance_value = float(distance)
-    #                 except (TypeError, ValueError):
-    #                     distance_value = None
-    #                 if distance_value is not None and math.isfinite(distance_value):
-    #                     sanitized["distance"] = distance_value
+                distance = point.get("distance")
+                if distance is not None:
+                    try:
+                        distance_value = float(distance)
+                    except (TypeError, ValueError):
+                        distance_value = None
+                    if distance_value is not None and math.isfinite(distance_value):
+                        sanitized["distance"] = distance_value
 
-    #             sanitized_points.append(sanitized)
+                sanitized_points.append(sanitized)
 
-    #     timestamp = data.get("timestamp")
-    #     timestamp_value = None
-    #     if isinstance(timestamp, (int, float)) and math.isfinite(float(timestamp)):
-    #         timestamp_value = float(timestamp)
+        timestamp = data.get("timestamp")
+        timestamp_value = None
+        if isinstance(timestamp, (int, float)) and math.isfinite(float(timestamp)):
+            timestamp_value = float(timestamp)
 
-    #     payload: Dict[str, Any] = {
-    #         "points": sanitized_points,
-    #         "frame_id": data.get("frame_id"),
-    #     }
-    #     if timestamp_value is not None:
-    #         payload["timestamp"] = timestamp_value
+        payload: Dict[str, Any] = {
+            "points": sanitized_points,
+            "frame_id": data.get("frame_id"),
+        }
+        if timestamp_value is not None:
+            payload["timestamp"] = timestamp_value
 
-    #     self._set(BlackboardDataKey.LIDAR_POINTS, payload)
+        self._set(BlackboardDataKey.LIDAR_POINTS, payload)
 
-    # def _on_target_object_selected(self, event: DomainEvent):
-    #     # data is of type DetectedObject in this case
-    #     self._set(BlackboardDataKey.SELECTED_TARGET_OBJECT, event.data)
+    def _on_target_object_selected(self, event: DomainEvent):
+        # data is of type DetectedObject in this case
+        self._set(BlackboardDataKey.SELECTED_TARGET_OBJECT, event.data)
 
-    # def _on_objects_detected(self, event: DomainEvent):
-    #     # data is of type Dict[str, List[DetectedObject]] in this case
-    #     self._set(BlackboardDataKey.DETECTED_OBJECTS, event.data)
+    def _on_objects_detected(self, event: DomainEvent):
+        # data is of type Dict[str, List[DetectedObject]] in this case
+        self._set(BlackboardDataKey.DETECTED_OBJECTS, event.data)
 
-    # def _on_object_world_coordinates_updated(self, event: DomainEvent):
-    #     # data is of type Dict[str, List[DetectedObject]] in this case
-    #     self._set(BlackboardDataKey.DETECTED_OBJECTS_WITH_COORDINATES, event.data)
+    def _on_object_world_coordinates_updated(self, event: DomainEvent):
+        # data is of type Dict[str, List[DetectedObject]] in this case
+        self._set(BlackboardDataKey.DETECTED_OBJECTS_WITH_COORDINATES, event.data)
 
-    # def _on_robot_position_updated(self, event: DomainEvent):
-    #     # data is of type geometry_msgs.msg.Vector3
-    #     translation = event.data
-    #     with self._lock:
-    #         self._set(BlackboardDataKey.ROBOT_POSITION, translation)
-    #         self._update_robot_trail(translation)
+    def _on_robot_position_updated(self, event: DomainEvent):
+        # data is of type geometry_msgs.msg.Vector3
+        translation = event.data
+        with self._lock:
+            self._set(BlackboardDataKey.ROBOT_POSITION, translation)
+            self._update_robot_trail(translation)
 
-    # def _on_robot_orientation_updated(self, event: DomainEvent):
-    #     # data is of type geometry_msgs.msg.Quaternion
-    #     self._set(BlackboardDataKey.ROBOT_ORIENTATION, event.data)
+    def _on_robot_orientation_updated(self, event: DomainEvent):
+        # data is of type geometry_msgs.msg.Quaternion
+        self._set(BlackboardDataKey.ROBOT_ORIENTATION, event.data)
 
     def _update_robot_trail(self, translation: Any) -> None:
         """Append the latest robot position to the bounded trail."""
@@ -473,23 +475,23 @@ class Blackboard(metaclass=SingletonMeta):
 
         self._set(BlackboardDataKey.ROBOT_TRAIL, trail)
 
-    # def _on_robot_is_turning_updated(self, event: DomainEvent):
-    #     # data is of type bool
-    #     self._set(BlackboardDataKey.ROBOT_IS_TURNING, event.data)
+    def _on_robot_is_turning_updated(self, event: DomainEvent):
+        # data is of type bool
+        self._set(BlackboardDataKey.ROBOT_IS_TURNING, event.data)
 
-    # def _on_map_updated(self, event: DomainEvent):
-    #     # data is of type List[PersistentTrackedObject]
-    #     self._set(BlackboardDataKey.ROBOT_MAP, event.data)
+    def _on_map_updated(self, event: DomainEvent):
+        # data is of type List[PersistentTrackedObject]
+        self._set(BlackboardDataKey.ROBOT_MAP, event.data)
 
-    # def _on_target_reached(self, event: DomainEvent):
-    #     # data is None
-    #     self._set(BlackboardDataKey.SELECTED_TARGET_OBJECT, None)
-    #     self._set(BlackboardDataKey.TARGET_OBJECT_CLASS, None)
-    #     self._event_bus.publish(DomainEvent(EventType.NAVIGATION_CANCEL_REQUEST, None))
+    def _on_target_reached(self, event: DomainEvent):
+        # data is None
+        self._set(BlackboardDataKey.SELECTED_TARGET_OBJECT, None)
+        self._set(BlackboardDataKey.TARGET_OBJECT_CLASS, None)
+        self._event_bus.publish(DomainEvent(EventType.NAVIGATION_CANCEL_REQUEST, None))
 
-    # def _on_camera_resolution_set(self, event: DomainEvent):
-    #     # data is of type Dict with keys 'width' and 'height'
-    #     self._set(BlackboardDataKey.CAMERA_RESOLUTION, event.data)
+    def _on_camera_resolution_set(self, event: DomainEvent):
+        # data is of type Dict with keys 'width' and 'height'
+        self._set(BlackboardDataKey.CAMERA_RESOLUTION, event.data)
 
     # Snapshot helpers for LLM tools
 
@@ -664,6 +666,17 @@ class Blackboard(metaclass=SingletonMeta):
         except AttributeError:
             return Blackboard._serialize_value(goal)
 
+    def publish(self, publisher):
+        # print(self.data.keys())
+        pickled = pickle.dumps(self.data)
+        encoded = base64.b64encode(pickled).decode('utf-8')
+
+        msg = String()
+        msg.data = encoded
+
+        publisher.publish(msg)
+
     def load_dict(self, dictionary):
         self.data = dictionary
         self._command_queue = self.get(BlackboardDataKey.COMMAND_QUEUE)
+
