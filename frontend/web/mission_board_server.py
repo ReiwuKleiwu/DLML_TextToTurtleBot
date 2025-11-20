@@ -11,7 +11,7 @@ from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 import uvicorn
 
-from web.state_builder import MissionBoardStateBuilder
+from frontend.web.state_builder import MissionBoardStateBuilder
 
 
 class MissionBoardServer:

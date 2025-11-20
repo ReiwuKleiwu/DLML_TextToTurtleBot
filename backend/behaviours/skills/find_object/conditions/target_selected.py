@@ -1,9 +1,9 @@
 import py_trees
 from py_trees.common import Status
 
-from blackboard.blackboard import Blackboard
-from blackboard.interfaces.blackboard_data_keys import BlackboardDataKey
-from perception.detection.object_detector import DetectedObject
+from shared.blackboard.blackboard import Blackboard
+from shared.blackboard.interfaces.blackboard_data_keys import BlackboardDataKey
+from backend.perception.detection.object_detector import DetectedObject
 
 
 class TargetSelected(py_trees.behaviour.Behaviour):

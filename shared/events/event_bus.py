@@ -4,8 +4,8 @@ from __future__ import annotations
 from collections import deque
 from typing import Callable, Deque, Dict, List
 
-from utils.singleton_meta import SingletonMeta
-from events.interfaces.events import DomainEvent, EventType
+from shared.utils.singleton_meta import SingletonMeta
+from shared.events.interfaces.events import DomainEvent, EventType
 
 EventCallback = Callable[[DomainEvent], None]
 

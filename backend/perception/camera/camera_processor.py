@@ -2,14 +2,14 @@ from typing import Any, Dict, List, Optional
 
 import time
 
-from events.event_bus import EventBus
-from events.interfaces.events import EventType, DomainEvent
+from shared.events.event_bus import EventBus
+from shared.events.interfaces.events import EventType, DomainEvent
 
-from perception.detection.object_detector import DetectedObject, ObjectDetector
-from perception.detection.target_selector import TargetSelector
+from backend.perception.detection.object_detector import DetectedObject, ObjectDetector
+from backend.perception.detection.target_selector import TargetSelector
 
-from blackboard.blackboard import Blackboard
-from blackboard.interfaces.blackboard_data_keys import BlackboardDataKey
+from shared.blackboard.blackboard import Blackboard
+from shared.blackboard.interfaces.blackboard_data_keys import BlackboardDataKey
 
 import cv2
 from cv_bridge import CvBridge

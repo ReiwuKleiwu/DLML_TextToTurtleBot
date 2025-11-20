@@ -1,9 +1,9 @@
 import py_trees
 
-from behaviours.skills.rotate.prepare_rotate_goal import PrepareRotateGoal
-from behaviours.skills.rotate.rotate_motion import RotateMotion
-from commands.user_command import UserCommand
-from utils.twist_wrapper import TwistWrapper
+from backend.behaviours.skills.rotate.prepare_rotate_goal import PrepareRotateGoal
+from backend.behaviours.skills.rotate.rotate_motion import RotateMotion
+from backend.commands.user_command import UserCommand
+from shared.utils.twist_wrapper import TwistWrapper
 
 
 class RotateSkill(py_trees.composites.Sequence):

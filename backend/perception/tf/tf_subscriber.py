@@ -2,8 +2,8 @@ import math
 import tf2_ros
 from rclpy.node import Node
 import rclpy
-from events.event_bus import EventBus
-from events.interfaces.events import EventType, DomainEvent
+from shared.events.event_bus import EventBus
+from shared.events.interfaces.events import EventType, DomainEvent
 
 
 class TFSubscriber:

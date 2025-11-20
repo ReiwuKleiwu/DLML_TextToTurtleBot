@@ -5,8 +5,8 @@ import math
 import time
 from typing import Any, Dict, List, Optional, Tuple
 
-from blackboard.blackboard import Blackboard
-from blackboard.interfaces.blackboard_data_keys import BlackboardDataKey
+from shared.blackboard.blackboard import Blackboard
+from shared.blackboard.interfaces.blackboard_data_keys import BlackboardDataKey
 
 
 class MissionBoardStateBuilder:

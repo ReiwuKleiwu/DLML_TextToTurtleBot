@@ -10,8 +10,8 @@ from rclpy.action import ActionClient
 from rclpy.node import Node
 from rclpy.task import Future
 
-from events.event_bus import EventBus
-from events.interfaces.events import DomainEvent, EventType
+from shared.events.event_bus import EventBus
+from shared.events.interfaces.events import DomainEvent, EventType
 
 
 class Nav2Client:

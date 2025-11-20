@@ -64,8 +64,8 @@ class UserCommand:
 
     def cleanup(self) -> None:
         """Reset any blackboard state associated with this command."""
-        from events.event_bus import EventBus
-        from events.interfaces.events import DomainEvent, EventType
+        from shared.events.event_bus import EventBus
+        from shared.events.interfaces.events import DomainEvent, EventType
 
         bus = EventBus()
 

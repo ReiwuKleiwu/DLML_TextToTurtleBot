@@ -2,8 +2,8 @@
 import rclpy
 from rclpy.node import Node
 from std_msgs.msg import String
-from web.mission_board_server import MissionBoardServer
-from blackboard.blackboard import Blackboard
+from frontend.web.mission_board_server import MissionBoardServer
+from shared.blackboard.blackboard import Blackboard
 
 import base64
 import pickle

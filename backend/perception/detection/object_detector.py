@@ -3,8 +3,8 @@ from typing import Dict, List
 from numpy import ndarray
 from ultralytics import YOLO
 
-from events.event_bus import EventBus
-from events.interfaces.events import EventType, DomainEvent
+from shared.events.event_bus import EventBus
+from shared.events.interfaces.events import EventType, DomainEvent
 
 class DetectedObject: 
     def __init__(self, x1: int, y1: int, x2: int, y2: int, name: str, confidence: float):

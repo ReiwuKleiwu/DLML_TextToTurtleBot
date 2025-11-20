@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from events.interfaces.events import EventType
-from navigation.docking_client import DockingClient
+from shared.events.interfaces.events import EventType
+from backend.navigation.docking_client import DockingClient
 
-from behaviours.skills.dock.docking_base import _BaseDockingSkill
+from backend.behaviours.skills.dock.docking_base import _BaseDockingSkill
 
 
 class UndockSkill(_BaseDockingSkill):

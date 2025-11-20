@@ -1,9 +1,9 @@
 from typing import Dict, List
-from events.event_bus import EventBus
-from events.interfaces.events import EventType, DomainEvent
-from blackboard.blackboard import Blackboard
-from blackboard.interfaces.blackboard_data_keys import BlackboardDataKey
-from perception.detection.object_detector import DetectedObject
+from shared.events.event_bus import EventBus
+from shared.events.interfaces.events import EventType, DomainEvent
+from shared.blackboard.blackboard import Blackboard
+from shared.blackboard.interfaces.blackboard_data_keys import BlackboardDataKey
+from backend.perception.detection.object_detector import DetectedObject
 import time
 from rclpy.node import Node
 

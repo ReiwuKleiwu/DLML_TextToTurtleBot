@@ -1,21 +1,21 @@
 import py_trees
 from py_trees.common import Status
 
-from behaviours.skills.find_object.actions.set_target_class import SetTargetClass
-from behaviours.skills.find_object.conditions.map_has_target import MapHasTarget
-from behaviours.skills.find_object.actions.send_nav_goal_to_target import SendNavGoalToTarget
-from behaviours.skills.find_object.conditions.wait_for_nav_or_target import WaitForNavOrTarget
-from behaviours.skills.find_object.actions.rotate_until_target_seen import RotateUntilTargetSeen
-from behaviours.skills.find_object.actions.align_to_target import AlignToTarget
-from behaviours.skills.find_object.actions.approach_target import ApproachTarget
-from behaviours.skills.find_object.conditions.target_selected import TargetSelected
-from behaviours.skills.find_object.conditions.wait_for_target_reached import WaitForTargetReached
-from commands.user_command import UserCommand
-from navigation.nav2_client import Nav2Client
-from utils.twist_wrapper import TwistWrapper
+from backend.behaviours.skills.find_object.actions.set_target_class import SetTargetClass
+from backend.behaviours.skills.find_object.conditions.map_has_target import MapHasTarget
+from backend.behaviours.skills.find_object.actions.send_nav_goal_to_target import SendNavGoalToTarget
+from backend.behaviours.skills.find_object.conditions.wait_for_nav_or_target import WaitForNavOrTarget
+from backend.behaviours.skills.find_object.actions.rotate_until_target_seen import RotateUntilTargetSeen
+from backend.behaviours.skills.find_object.actions.align_to_target import AlignToTarget
+from backend.behaviours.skills.find_object.actions.approach_target import ApproachTarget
+from backend.behaviours.skills.find_object.conditions.target_selected import TargetSelected
+from backend.behaviours.skills.find_object.conditions.wait_for_target_reached import WaitForTargetReached
+from backend.commands.user_command import UserCommand
+from backend.navigation.nav2_client import Nav2Client
+from shared.utils.twist_wrapper import TwistWrapper
 from rclpy.node import Node
-from events.event_bus import EventBus
-from events.interfaces.events import DomainEvent, EventType
+from shared.events.event_bus import EventBus
+from shared.events.interfaces.events import DomainEvent, EventType
 
 
 class FindObjectSkill(py_trees.composites.Sequence):

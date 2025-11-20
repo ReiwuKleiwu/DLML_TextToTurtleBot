@@ -3,12 +3,12 @@ from typing import Optional
 import py_trees
 from py_trees.common import Status
 
-from blackboard.blackboard import Blackboard
-from blackboard.interfaces.blackboard_data_keys import BlackboardDataKey
-from commands.user_command import UserCommand
-from utils.twist_wrapper import TwistWrapper
-from events.event_bus import EventBus
-from events.interfaces.events import DomainEvent, EventType
+from shared.blackboard.blackboard import Blackboard
+from shared.blackboard.interfaces.blackboard_data_keys import BlackboardDataKey
+from backend.commands.user_command import UserCommand
+from shared.utils.twist_wrapper import TwistWrapper
+from shared.events.event_bus import EventBus
+from shared.events.interfaces.events import DomainEvent, EventType
 
 class DriveMotion(py_trees.behaviour.Behaviour):
     """Publish velocity commands until the requested distance has been travelled."""

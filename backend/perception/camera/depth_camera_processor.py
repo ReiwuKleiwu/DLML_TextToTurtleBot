@@ -2,16 +2,16 @@ from typing import List, Dict
 
 import numpy as np
 from numpy import ndarray
-from blackboard.blackboard import Blackboard
+from shared.blackboard.blackboard import Blackboard
 from cv_bridge import CvBridge
-from events.event_bus import EventBus
-from events.interfaces.events import EventType, DomainEvent
-from blackboard.interfaces.blackboard_data_keys import BlackboardDataKey
+from shared.events.event_bus import EventBus
+from shared.events.interfaces.events import EventType, DomainEvent
+from shared.blackboard.interfaces.blackboard_data_keys import BlackboardDataKey
 import pyrealsense2 as rs2
 from geometry_msgs.msg import PointStamped
 import tf2_geometry_msgs  # noqa: F401 - registers geometry conversions for tf transforms
 
-from perception.detection.object_detector import DetectedObject
+from backend.perception.detection.object_detector import DetectedObject
 
 class DepthCameraProcessor():
     def __init__(self, bridge: CvBridge, tf_buffer):

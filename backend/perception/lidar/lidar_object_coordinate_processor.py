@@ -7,11 +7,11 @@ from builtin_interfaces.msg import Time
 from geometry_msgs.msg import PointStamped
 import tf2_geometry_msgs  # noqa: F401 - needed for TF conversions
 
-from blackboard.blackboard import Blackboard
-from blackboard.interfaces.blackboard_data_keys import BlackboardDataKey
-from events.event_bus import EventBus
-from events.interfaces.events import DomainEvent, EventType
-from perception.detection.object_detector import DetectedObject
+from shared.blackboard.blackboard import Blackboard
+from shared.blackboard.interfaces.blackboard_data_keys import BlackboardDataKey
+from shared.events.event_bus import EventBus
+from shared.events.interfaces.events import DomainEvent, EventType
+from backend.perception.detection.object_detector import DetectedObject
 
 
 class LidarObjectCoordinateProcessor:

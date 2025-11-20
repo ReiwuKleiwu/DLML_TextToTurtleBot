@@ -3,21 +3,21 @@ from typing import Optional
 import py_trees
 from py_trees.common import Status
 
-from blackboard.interfaces.blackboard_data_keys import BlackboardDataKey
-from blackboard.blackboard import Blackboard
-from commands.user_command import CommandType, UserCommand
-from behaviours.skills.drive.drive_skill import DriveSkill
-from behaviours.skills.rotate.rotate_skill import RotateSkill
-from behaviours.skills.navigate.navigate_skill import NavigateSkill
-from behaviours.skills.find_object.find_object_skill import FindObjectSkill
-from behaviours.skills.dock.dock_skill import DockSkill
-from behaviours.skills.dock.undock_skill import UndockSkill
-from navigation.nav2_client import Nav2Client
-from navigation.docking_client import DockingClient
+from shared.blackboard.interfaces.blackboard_data_keys import BlackboardDataKey
+from shared.blackboard.blackboard import Blackboard
+from backend.commands.user_command import CommandType, UserCommand
+from backend.behaviours.skills.drive.drive_skill import DriveSkill
+from backend.behaviours.skills.rotate.rotate_skill import RotateSkill
+from backend.behaviours.skills.navigate.navigate_skill import NavigateSkill
+from backend.behaviours.skills.find_object.find_object_skill import FindObjectSkill
+from backend.behaviours.skills.dock.dock_skill import DockSkill
+from backend.behaviours.skills.dock.undock_skill import UndockSkill
+from backend.navigation.nav2_client import Nav2Client
+from backend.navigation.docking_client import DockingClient
 from rclpy.node import Node
-from events.event_bus import EventBus
-from events.interfaces.events import DomainEvent, EventType
-from utils.twist_wrapper import TwistWrapper
+from shared.events.event_bus import EventBus
+from shared.events.interfaces.events import DomainEvent, EventType
+from shared.utils.twist_wrapper import TwistWrapper
 
 
 class UserCommandExecutor(py_trees.behaviour.Behaviour):

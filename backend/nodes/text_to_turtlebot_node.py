@@ -6,36 +6,36 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from cv_bridge import CvBridge
-from perception.camera.camera_processor import CameraProcessor
-from perception.camera.depth_camera_processor import DepthCameraProcessor
-from perception.detection.object_detector import ObjectDetector
-from perception.detection.target_reached_detector import TargetReachedDetector
-from perception.detection.target_selector import TargetSelector
-from perception.tf.tf_subscriber import TFSubscriber
+from backend.perception.camera.camera_processor import CameraProcessor
+from backend.perception.camera.depth_camera_processor import DepthCameraProcessor
+from backend.perception.detection.object_detector import ObjectDetector
+from backend.perception.detection.target_reached_detector import TargetReachedDetector
+from backend.perception.detection.target_selector import TargetSelector
+from backend.perception.tf.tf_subscriber import TFSubscriber
 from rclpy.node import Node
 import py_trees
 from geometry_msgs.msg import Twist, TwistStamped
-from utils.twist_wrapper import TwistWrapper
-from behaviours.actions.turn_around import TurnAround
-from behaviours.conditions.check_lidar import CheckLidar
-from behaviours.conditions.navigation_goal_idle import NavigationGoalIdle
-from behaviours.user_command_executor import UserCommandExecutor
-from navigation.nav2_client import Nav2Client
-from navigation.docking_client import DockingClient
+from shared.utils.twist_wrapper import TwistWrapper
+from backend.behaviours.actions.turn_around import TurnAround
+from backend.behaviours.conditions.check_lidar import CheckLidar
+from backend.behaviours.conditions.navigation_goal_idle import NavigationGoalIdle
+from backend.behaviours.user_command_executor import UserCommandExecutor
+from backend.navigation.nav2_client import Nav2Client
+from backend.navigation.docking_client import DockingClient
 from sensor_msgs.msg import LaserScan, Image, CameraInfo
 from std_msgs.msg import String
-from events.event_bus import EventBus
-from blackboard.blackboard import Blackboard
-from map.map import Map
-from natural_language_processing.llm_api import LLMAPI
-from natural_language_processing.text_to_speech import (
+from shared.events.event_bus import EventBus
+from shared.blackboard.blackboard import Blackboard
+from backend.map.map import Map
+from backend.natural_language_processing.llm_api import LLMAPI
+from backend.natural_language_processing.text_to_speech import (
     TextToSpeechError,
     TextToSpeechService,
 )
 from langchain_core.messages import BaseMessage
 
-from perception.lidar.lidar_processor import LidarProcessor
-from perception.lidar.lidar_object_coordinate_processor import LidarObjectCoordinateProcessor
+from backend.perception.lidar.lidar_processor import LidarProcessor
+from backend.perception.lidar.lidar_object_coordinate_processor import LidarObjectCoordinateProcessor
 
 from std_msgs.msg import String
 

@@ -5,9 +5,9 @@ from typing import Optional
 import py_trees
 from py_trees.common import Status
 
-from events.event_bus import EventBus
-from events.interfaces.events import DomainEvent
-from navigation.docking_client import DockingClient
+from shared.events.event_bus import EventBus
+from shared.events.interfaces.events import DomainEvent
+from backend.navigation.docking_client import DockingClient
 
 
 class _BaseDockingSkill(py_trees.behaviour.Behaviour):

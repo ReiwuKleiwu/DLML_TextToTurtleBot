@@ -3,7 +3,7 @@ import random
 import py_trees
 from py_trees.common import Status
 
-from utils.twist_wrapper import TwistWrapper
+from shared.utils.twist_wrapper import TwistWrapper
 
 
 class RotateUntilTargetSeen(py_trees.behaviour.Behaviour):

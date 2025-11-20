@@ -1,13 +1,13 @@
 from math import hypot
 from typing import Dict, List, Optional, Tuple
 
-from perception.detection.object_detector import DetectedObject
+from backend.perception.detection.object_detector import DetectedObject
 
-from blackboard.blackboard import Blackboard
-from blackboard.interfaces.blackboard_data_keys import BlackboardDataKey
+from shared.blackboard.blackboard import Blackboard
+from shared.blackboard.interfaces.blackboard_data_keys import BlackboardDataKey
 
-from events.event_bus import EventBus
-from events.interfaces.events import EventType, DomainEvent
+from shared.events.event_bus import EventBus
+from shared.events.interfaces.events import EventType, DomainEvent
 
 
 class TargetSelector:

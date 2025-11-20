@@ -5,11 +5,11 @@ from threading import RLock
 import math
 import time
 
-from utils.singleton_meta import SingletonMeta
-from events.event_bus import EventBus
-from events.interfaces.events import DomainEvent, EventType
-from blackboard.interfaces.blackboard_data_keys import BlackboardDataKey
-from commands.user_command import UserCommand
+from shared.utils.singleton_meta import SingletonMeta
+from shared.events.event_bus import EventBus
+from shared.events.interfaces.events import DomainEvent, EventType
+from shared.blackboard.interfaces.blackboard_data_keys import BlackboardDataKey
+from backend.commands.user_command import UserCommand
 from std_msgs.msg import String
 import pickle
 import base64

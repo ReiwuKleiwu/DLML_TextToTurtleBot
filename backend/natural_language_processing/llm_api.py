@@ -12,13 +12,13 @@ from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.tools import BaseTool
 from langchain.tools import tool
 
-from blackboard.blackboard import Blackboard
-from natural_language_processing.langchain_tools import LANGCHAIN_TOOLS
-from natural_language_processing.llm_adapters import (
+from shared.blackboard.blackboard import Blackboard
+from backend.natural_language_processing.langchain_tools import LANGCHAIN_TOOLS
+from backend.natural_language_processing.llm_adapters import (
     BaseLLMAdapter,
     create_llm_adapter,
 )
-from natural_language_processing.text_to_speech import TextToSpeechSettings
+from backend.natural_language_processing.text_to_speech import TextToSpeechSettings
 
 
 DEFAULT_SYSTEM_PROMPT = (

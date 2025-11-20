@@ -1,12 +1,12 @@
 import py_trees
 from py_trees.common import Status
 
-from blackboard.blackboard import Blackboard
-from blackboard.interfaces.blackboard_data_keys import BlackboardDataKey
-from events.event_bus import EventBus
-from events.interfaces.events import DomainEvent, EventType
-from perception.detection.object_detector import DetectedObject
-from utils.twist_wrapper import TwistWrapper
+from shared.blackboard.blackboard import Blackboard
+from shared.blackboard.interfaces.blackboard_data_keys import BlackboardDataKey
+from shared.events.event_bus import EventBus
+from shared.events.interfaces.events import DomainEvent, EventType
+from backend.perception.detection.object_detector import DetectedObject
+from shared.utils.twist_wrapper import TwistWrapper
 
 
 class ApproachTarget(py_trees.behaviour.Behaviour):

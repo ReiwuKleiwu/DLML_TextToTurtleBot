@@ -1,8 +1,8 @@
 import py_trees
 from py_trees.common import Status
 
-from events.event_bus import EventBus
-from events.interfaces.events import DomainEvent, EventType
+from shared.events.event_bus import EventBus
+from shared.events.interfaces.events import DomainEvent, EventType
 
 
 class SetTargetClass(py_trees.behaviour.Behaviour):

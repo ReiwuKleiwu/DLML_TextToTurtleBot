@@ -1,10 +1,10 @@
-from perception.detection.object_detector import DetectedObject
+from backend.perception.detection.object_detector import DetectedObject
 from rclpy.node import Node
 
-from events.event_bus import EventBus
-from events.interfaces.events import EventType, DomainEvent
-from blackboard.blackboard import Blackboard
-from blackboard.interfaces.blackboard_data_keys import BlackboardDataKey
+from shared.events.event_bus import EventBus
+from shared.events.interfaces.events import EventType, DomainEvent
+from shared.blackboard.blackboard import Blackboard
+from shared.blackboard.interfaces.blackboard_data_keys import BlackboardDataKey
 
 class TargetReachedDetector:
     def __init__(self, node: Node, target_reached_threshold: float = 1.5) -> None:

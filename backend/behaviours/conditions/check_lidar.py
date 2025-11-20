@@ -1,6 +1,8 @@
 from py_trees.behaviour import Behaviour
 from py_trees.common import Status
-from blackboard.blackboard import Blackboard, BlackboardDataKey
+from shared.blackboard.blackboard import Blackboard
+from shared.blackboard.interfaces.blackboard_data_keys import BlackboardDataKey
+
 
 class CheckLidar(Behaviour):
     def __init__(self, name: str) -> None:

@@ -4,12 +4,12 @@ import math
 import py_trees
 from py_trees.common import Status
 
-from commands.user_command import UserCommand
+from backend.commands.user_command import UserCommand
 from geometry_msgs.msg import PoseStamped, Quaternion
-from navigation.nav2_client import Nav2Client
+from backend.navigation.nav2_client import Nav2Client
 from rclpy.node import Node
-from events.event_bus import EventBus
-from events.interfaces.events import DomainEvent, EventType
+from shared.events.event_bus import EventBus
+from shared.events.interfaces.events import DomainEvent, EventType
 
 
 class NavigateSkill(py_trees.behaviour.Behaviour):

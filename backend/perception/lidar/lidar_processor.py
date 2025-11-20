@@ -1,10 +1,10 @@
 import math
 from typing import Any, Dict, List, Optional, Tuple
 
-from events.event_bus import EventBus
-from events.interfaces.events import DomainEvent, EventType
-from blackboard.blackboard import Blackboard
-from blackboard.interfaces.blackboard_data_keys import BlackboardDataKey
+from shared.events.event_bus import EventBus
+from shared.events.interfaces.events import DomainEvent, EventType
+from shared.blackboard.blackboard import Blackboard
+from shared.blackboard.interfaces.blackboard_data_keys import BlackboardDataKey
 
 
 class LidarProcessor:

@@ -1,9 +1,9 @@
 import py_trees
 
-from behaviours.skills.drive.drive_motion import DriveMotion
-from behaviours.skills.drive.prepare_drive_goal import PrepareDriveGoal
-from commands.user_command import UserCommand
-from utils.twist_wrapper import TwistWrapper
+from backend.behaviours.skills.drive.drive_motion import DriveMotion
+from backend.behaviours.skills.drive.prepare_drive_goal import PrepareDriveGoal
+from backend.commands.user_command import UserCommand
+from shared.utils.twist_wrapper import TwistWrapper
 
 class DriveSkill(py_trees.composites.Sequence):
     """Sequential skill that carries out a simple distance-based drive command."""

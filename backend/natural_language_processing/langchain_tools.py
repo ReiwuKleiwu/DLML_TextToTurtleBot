@@ -5,11 +5,11 @@ from typing import Any, Dict, Optional
 
 from langchain.tools import tool
 
-from blackboard.blackboard import Blackboard
-from blackboard.interfaces.blackboard_data_keys import BlackboardDataKey
-from commands.user_command import UserCommand
-from events.event_bus import EventBus
-from events.interfaces.events import DomainEvent, EventType
+from shared.blackboard.blackboard import Blackboard
+from shared.blackboard.interfaces.blackboard_data_keys import BlackboardDataKey
+from backend.commands.user_command import UserCommand
+from shared.events.event_bus import EventBus
+from shared.events.interfaces.events import DomainEvent, EventType
 
 _blackboard = Blackboard()
 _event_bus = EventBus()
