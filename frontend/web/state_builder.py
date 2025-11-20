@@ -13,7 +13,7 @@ class MissionBoardStateBuilder:
     """Collects and serializes the current blackboard state for the mission board UI."""
 
     def __init__(self) -> None:
-        self._blackboard = Blackboard()
+        self._blackboard = Blackboard(disable_event_bus_subscription=True)
 
     def build_state(self) -> Dict[str, Any]:
         robot_position = self._blackboard.get(BlackboardDataKey.ROBOT_POSITION)

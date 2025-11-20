@@ -15,7 +15,7 @@ class BlackboardSubscriber(Node):
         self._mission_board_server = MissionBoardServer(instruction_handler=self.submit_llm_instruction)
         self._mission_board_server.start()
 
-        self._blackboard = Blackboard()
+        self._blackboard = Blackboard(disable_event_bus_subscription=True)
 
         self.subscription = self.create_subscription(
             String,
