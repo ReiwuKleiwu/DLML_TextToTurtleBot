@@ -17,7 +17,7 @@
       "temperature": 0.6,
       "max_iterations": 60,
       "options": {
-        "organization": "org-fRH94Fz4AYPn76fYf3pJ79k1"
+        "organization": "org-GZZmEeLtTTNjQMgvlKTBSlib"
       },
       "capabilities": {
         "input_modalities": ["text", "image"]
@@ -39,5 +39,6 @@
     "voice": "ballad",
     "audio_format": "mp3",
     "output_dir": "audio",
-    "instructions": "Consistently use a Heavy Austrian accent as the one and only Digital Action Hero Bodybuilder, with **EXTREME** emphasis that you speak way over the top for comedic effect. Use a booming tone, use pauses for dramatic effect. No exceptions!"  }
+    "instructions": "Consistently use a Heavy Austrian accent as the one and only Digital Action Hero Bodybuilder, with **EXTREME** emphasis that you speak way over the top for comedic effect. Use a booming tone, use pauses for dramatic effect. No exceptions!"
+  }
 }
