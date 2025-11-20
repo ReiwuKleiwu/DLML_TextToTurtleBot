@@ -26,6 +26,8 @@ class BlackboardSubscriber(Node):
         self.subscription  # prevent unused variable warning
         self.get_logger().info("Blackboard subscriber started; listening on /blackboard")
 
+        self._llm_instruction_publisher = self.create_publisher(String, 'llm_instruction', 10)
+
     def listener_callback(self, msg: String):
         data_b64 = msg.data
 
@@ -42,8 +44,10 @@ class BlackboardSubscriber(Node):
         except Exception as e:
             self.get_logger().error(f"Failed to decode/unpickle data: {e}")
     
-    def submit_llm_instruction(self):
-        pass
+    def submit_llm_instruction(self, instruction):
+        msg = String()
+        msg.data = instruction
+        self._llm_instruction_publisher.publish(msg)
 
 
 def main(args=None):
