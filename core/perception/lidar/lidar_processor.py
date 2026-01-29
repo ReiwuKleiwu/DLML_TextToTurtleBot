@@ -64,7 +64,6 @@ class LidarProcessor:
 
         nearest = min(cleaned) if cleaned else float("inf")
 
-        print(f"nearest: {nearest}")
         if nearest >= self.max_distance_threshold:
             self._event_bus.publish(DomainEvent(event_type=EventType.LIDAR_OBSTACLE_ABSENT, data={}))
             return
