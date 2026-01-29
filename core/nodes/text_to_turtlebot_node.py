@@ -38,7 +38,7 @@ from core.perception.lidar.lidar_processor import LidarProcessor
 from core.perception.lidar.lidar_object_coordinate_processor import LidarObjectCoordinateProcessor
 
 from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy
-from perception.lidar.lidar_object_coordinate_processor import LidarObjectCoordinateProcessor
+from core.perception.lidar.lidar_object_coordinate_processor import LidarObjectCoordinateProcessor
 
 from std_msgs.msg import String
 
