@@ -10,7 +10,7 @@ from shared.blackboard.interfaces.blackboard_data_keys import BlackboardDataKey
 class LidarProcessor:
     def __init__(
         self,
-        max_distance_threshold: float = 0.2,
+        max_distance_threshold: float = 0.3,
         front_angle_dec: float = 30.0,
         pointcloud_distance_limit: float = 15.0,
         point_stride: int = 1,
@@ -64,6 +64,7 @@ class LidarProcessor:
 
         nearest = min(cleaned) if cleaned else float("inf")
 
+        print(f"nearest: {nearest}")
         if nearest >= self.max_distance_threshold:
             self._event_bus.publish(DomainEvent(event_type=EventType.LIDAR_OBSTACLE_ABSENT, data={}))
             return

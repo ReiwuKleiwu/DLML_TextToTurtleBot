@@ -28,7 +28,7 @@ class LidarObjectCoordinateProcessor:
         lateral_tolerance: float = 0.4,
         max_distance: float = 15.0,
         horizontal_tolerance_ratio: float = 0.2,
-        vertical_sample_count: int = 3,
+        vertical_sample_count: int = 10,
         vertical_sample_stride_ratio: float = 0.15,
     ) -> None:
         self._tf_buffer = tf_buffer
