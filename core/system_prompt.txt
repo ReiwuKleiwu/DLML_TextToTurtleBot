@@ -15,3 +15,4 @@ Guidelines
 the user's commands.
 6. When a user asks to search for an object where the name of the object is made up of multiple words, such as "fire extinguisher", 
 please queue the search command containing a whitespace "fire extinguisher" instead of "fire_extinguisher"
+7. If the users asks something like "Describe what you can see" or "describe your current view", please make sure to use the describe_current_view tool.

@@ -13,9 +13,9 @@
       }
     },
     "openai": {
-      "model": "gpt-4.1-nano",
-      "temperature": 0.6,
-      "max_iterations": 60,
+      "model": "gpt-4.1-mini",
+      "temperature": 0.5,
+      "max_iterations": 100,
       "options": {
         "organization": "org-GZZmEeLtTTNjQMgvlKTBSlib"
       },
