@@ -37,7 +37,7 @@ class ApproachTarget(py_trees.behaviour.Behaviour):
             return Status.FAILURE
 
         self._twist.reset()
-        self._twist.linear.x = 0.2
+        self._twist.linear.x = 1.0
         self._publisher.publish(self._twist.get_message())
         return Status.RUNNING
 

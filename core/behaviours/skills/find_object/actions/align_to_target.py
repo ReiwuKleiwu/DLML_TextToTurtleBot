@@ -41,7 +41,7 @@ class AlignToTarget(py_trees.behaviour.Behaviour):
 
         normalized_turn_direction = self._map_to_minus1_to_1(error, -self._camera_resolution['width']/2, self._camera_resolution['width']/2)
         self._twist.reset()
-        self._twist.angular.z = -1 * normalized_turn_direction
+        self._twist.angular.z = -0.1 * normalized_turn_direction
         self._publisher.publish(self._twist.get_message())
         return Status.RUNNING
 

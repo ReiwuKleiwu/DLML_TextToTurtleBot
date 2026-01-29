@@ -68,9 +68,8 @@ class ObjectDetector:
         model = YOLO(f"{model_path}/yolov8s-worldv2.pt")
 
         classes = ["table", "monitor", "closed door", "open door", "chair", "computer",
-             "person", "fridge", "fire extinguisher", "window", "blackboard",
-             "kitchen cabinet", "wall", "toilet", "towel", "radiator", "desk",
-             "bin", "door"
+             "person", "fire extinguisher", "window", "blackboard","wall", "desk",
+             "bin", "door", "monitor", "backpack", "cardboard box", 'laptop'
              ]
 
         model.set_classes(

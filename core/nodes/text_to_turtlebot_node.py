@@ -22,7 +22,7 @@ from core.behaviours.conditions.navigation_goal_idle import NavigationGoalIdle
 from core.behaviours.user_command_executor import UserCommandExecutor
 from core.navigation.nav2_client import Nav2Client
 from core.navigation.docking_client import DockingClient
-from sensor_msgs.msg import LaserScan, Image, CameraInfo
+from sensor_msgs.msg import LaserScan, Image, CameraInfo, CompressedImage
 from std_msgs.msg import String
 from shared.events.event_bus import EventBus
 from shared.blackboard.blackboard import Blackboard
@@ -36,6 +36,9 @@ from langchain_core.messages import BaseMessage
 
 from core.perception.lidar.lidar_processor import LidarProcessor
 from core.perception.lidar.lidar_object_coordinate_processor import LidarObjectCoordinateProcessor
+
+from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy
+from perception.lidar.lidar_object_coordinate_processor import LidarObjectCoordinateProcessor
 
 from std_msgs.msg import String
 
@@ -72,7 +75,7 @@ class TextToTurtlebotNode(Node):
 
         self._target_reached_detector = TargetReachedDetector(
             self,
-            target_reached_threshold=1.5 # meters
+            target_reached_threshold=1.0 # meters
         )
 
         self._camera_processor = CameraProcessor(
@@ -134,17 +137,22 @@ class TextToTurtlebotNode(Node):
         self._llm_thread.start()
         self._blackboard_thread.start()
 
+        qos_profile = QoSProfile(
+            reliability=ReliabilityPolicy.BEST_EFFORT,  # Verzicht auf Nachrichtenwiederholung
+            history=HistoryPolicy.KEEP_LAST,  # Nur die letzte Nachricht aufbewahren
+            depth=1  # Nur eine Nachricht im Puffer
+            )
 
         self.create_subscription(
-            Image,
-            f'{namespace}oakd/rgb/preview/image_raw',
+            CompressedImage,
+            f'{namespace}/oakd/rgb/image_raw/compressed',
             self._camera_processor.handle,
-            10
+            qos_profile
         )
 
         self.create_subscription(
             CameraInfo,
-             f'{namespace}/oakd/rgb/preview/camera_info',
+            f'{namespace}/oakd/rgb/camera_info',
             self._handle_camera_info,
             10
         )

@@ -10,7 +10,7 @@ from shared.blackboard.interfaces.blackboard_data_keys import BlackboardDataKey
 class LidarProcessor:
     def __init__(
         self,
-        max_distance_threshold: float = 1.0,
+        max_distance_threshold: float = 0.2,
         front_angle_dec: float = 30.0,
         pointcloud_distance_limit: float = 15.0,
         point_stride: int = 1,

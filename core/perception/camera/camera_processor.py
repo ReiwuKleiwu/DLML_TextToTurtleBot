@@ -25,7 +25,7 @@ class CameraProcessor:
         self._last_snapshot_ts = 0.0
     
     def handle(self, msg) -> None:
-        cv_image = self._bridge.imgmsg_to_cv2(msg, desired_encoding='bgr8')
+        cv_image = self._bridge.compressed_imgmsg_to_cv2(msg, desired_encoding='bgr8')
         camera_height, camera_width = cv_image.shape[:2]
 
         camera_resolution = self._blackboard.get(BlackboardDataKey.CAMERA_RESOLUTION)

@@ -47,7 +47,7 @@ class Map:
         self.max_processing_distance = 7.5  # meters
 
         # Distance threshold to consider two objects of the same class as the same (in meters)
-        self.match_distance_threshold = 0.5  # meters
+        self.match_distance_threshold = 1.0  # meters
 
         # Time threshold to remove temporary tracked objects if not seen again (in seconds)
         self.temporary_tracked_object_timeout = 5.0  # seconds

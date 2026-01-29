@@ -15,7 +15,7 @@ from shared.events.interfaces.events import DomainEvent, EventType
 class RotateMotion(py_trees.behaviour.Behaviour):
     """Publish angular velocity commands until the requested rotation is achieved."""
 
-    def __init__(self, name: str, command: UserCommand, angular_speed: float = 0.8, tolerance_deg: float = 2.0) -> None:
+    def __init__(self, name: str, command: UserCommand, angular_speed: float = 0.08, tolerance_deg: float = 1.0) -> None:
         super().__init__(name)
         self._blackboard: Blackboard = Blackboard()
         self._twist: Optional[TwistWrapper] = None
