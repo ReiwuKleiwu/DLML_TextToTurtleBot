@@ -1,1 +1,1 @@
-"""Mission board web UI package."""
+"""Web package."""

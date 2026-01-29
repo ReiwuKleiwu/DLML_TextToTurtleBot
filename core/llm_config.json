@@ -1,0 +1,44 @@
+{
+  "default_provider": "openai",
+  "max_iterations": 5,
+  "adapters": {
+    "ollama": {
+      "model": "llama3.2:3b",
+      "temperature": 0.3,
+      "options": {
+        "base_url": "http://localhost:11434"
+      },
+      "capabilities": {
+        "input_modalities": ["text"]
+      }
+    },
+    "openai": {
+      "model": "gpt-4.1-nano",
+      "temperature": 0.6,
+      "max_iterations": 60,
+      "options": {
+        "organization": "org-GZZmEeLtTTNjQMgvlKTBSlib"
+      },
+      "capabilities": {
+        "input_modalities": ["text", "image"]
+      }
+    },
+    "gemini": {
+      "model": "gemini-2.5-flash",
+      "temperature": 0.1,
+      "options": {},
+      "capabilities": {
+        "input_modalities": ["text", "image"]
+      }
+    }
+  },
+  "text_to_speech": {
+    "enabled": false,
+    "provider": "openai",
+    "model": "gpt-4o-mini-tts",
+    "voice": "ballad",
+    "audio_format": "mp3",
+    "output_dir": "audio",
+    "instructions": "Consistently use a Heavy Austrian accent as the one and only Digital Action Hero Bodybuilder, with **EXTREME** emphasis that you speak way over the top for comedic effect. Use a booming tone, use pauses for dramatic effect. No exceptions!"
+  }
+}
