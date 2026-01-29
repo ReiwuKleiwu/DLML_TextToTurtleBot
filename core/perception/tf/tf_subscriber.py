@@ -4,6 +4,7 @@ from rclpy.node import Node
 import rclpy
 from shared.events.event_bus import EventBus
 from shared.events.interfaces.events import EventType, DomainEvent
+from core.perception.tf.transform_listener import TransformListener
 
 
 class TFSubscriber:
@@ -24,7 +25,7 @@ class TFSubscriber:
         
         # Initialize tf2 buffer and listener
         self.tf_buffer = tf2_ros.Buffer()
-        self.tf_listener = tf2_ros.TransformListener(self.tf_buffer, node)
+        self.tf_listener = TransformListener(self.tf_buffer, node)
         
         # Store the previous and latest transform
         self.previous_transform = None
