@@ -10,8 +10,8 @@ import pickle
 
 
 class BlackboardSubscriber(Node):
-    def __init__(self):
-        super().__init__('blackboard_subscriber')
+    def __init__(self, namespace):
+        super().__init__('blackboard_subscriber', namespace=namespace)
         self._mission_board_server = MissionBoardServer(instruction_handler=self.submit_llm_instruction)
         self._mission_board_server.start()
 
@@ -19,14 +19,14 @@ class BlackboardSubscriber(Node):
 
         self.subscription = self.create_subscription(
             String,
-            '/blackboard',
+            f'{namespace}/blackboard',
             self.listener_callback,
             10
         )
         self.subscription  # prevent unused variable warning
         self.get_logger().info("Blackboard subscriber started; listening on /blackboard")
 
-        self._llm_instruction_publisher = self.create_publisher(String, 'llm_instruction', 10)
+        self._llm_instruction_publisher = self.create_publisher(String, f'{namespace}/llm_instruction', 10)
 
     def listener_callback(self, msg: String):
         data_b64 = msg.data
@@ -52,7 +52,7 @@ class BlackboardSubscriber(Node):
 
 def main(args=None):
     rclpy.init(args=args)
-    node = BlackboardSubscriber()
+    node = BlackboardSubscriber(namespace='/robot_2')
     try:
         rclpy.spin(node)
     except KeyboardInterrupt:
