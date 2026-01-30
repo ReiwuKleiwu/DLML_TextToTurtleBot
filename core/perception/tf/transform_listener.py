@@ -51,6 +51,7 @@ class TransformListener:
         self,
         buffer: Buffer,
         node: Node,
+        namespace: str,
         *,
         spin_thread: bool = False,
         qos: Optional[Union[QoSProfile, int]] = None,
@@ -82,7 +83,6 @@ class TransformListener:
         # Default callback group is mutually exclusive, which would prevent waiting for transforms
         # from another callback in the same group.
         self.group = ReentrantCallbackGroup()
-        namespace = node.get_namespace()
         self.tf_sub = node.create_subscription(
             TFMessage, f'{namespace}/tf', self.callback, qos, callback_group=self.group)
         self.tf_static_sub = node.create_subscription(

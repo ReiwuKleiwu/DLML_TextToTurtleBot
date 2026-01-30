@@ -59,7 +59,7 @@ class TextToTurtlebotNode(Node):
 
         self.map = Map(self)
 
-        self._tf_subscriber = TFSubscriber(self, base_link_frame="base_link")
+        self._tf_subscriber = TFSubscriber(self, namespace, base_link_frame="base_link")
 
         self._object_detector = ObjectDetector(
             './yolo_models',
@@ -67,7 +67,7 @@ class TextToTurtlebotNode(Node):
         )
         self._target_selector = TargetSelector(
             persistence_frames=10,
-            distance_threshold=100.00
+            distance_threshold=250.00
         )
 
         self._target_reached_detector = TargetReachedDetector(
@@ -81,7 +81,7 @@ class TextToTurtlebotNode(Node):
             self._target_selector
         )
 
-        coordinate_mode = "lidar"  # set to "lidar" to use LIDAR-based object coordinates
+        coordinate_mode = "depth"  # set to "lidar" to use LIDAR-based object coordinates
         if coordinate_mode not in {"depth", "lidar"}:
             coordinate_mode = "depth"
         self._coordinate_mode = coordinate_mode
@@ -137,7 +137,7 @@ class TextToTurtlebotNode(Node):
 
         self.create_subscription(
             Image,
-            f'{namespace}oakd/rgb/preview/image_raw',
+            f'{namespace}/oakd/rgb/preview/image_raw',
             self._camera_processor.handle,
             10
         )

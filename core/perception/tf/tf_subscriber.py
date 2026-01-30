@@ -8,7 +8,7 @@ from core.perception.tf.transform_listener import TransformListener
 
 
 class TFSubscriber:
-    def __init__(self, node: Node, base_link_frame: str = "base_link", world_frame: str = "map"):
+    def __init__(self, node: Node, namespace: str, base_link_frame: str = "base_link", world_frame: str = "map"):
         """
         Initialize the TF subscriber to listen to base_link position.
         
@@ -25,7 +25,7 @@ class TFSubscriber:
         
         # Initialize tf2 buffer and listener
         self.tf_buffer = tf2_ros.Buffer()
-        self.tf_listener = TransformListener(self.tf_buffer, node)
+        self.tf_listener = TransformListener(self.tf_buffer, node, namespace)
         
         # Store the previous and latest transform
         self.previous_transform = None
