@@ -90,4 +90,4 @@ ros2 launch turtlebot4_gz_bringup turtlebot4_gz.launch.py slam:=true nav2:=true 
 python3 -m core.main --namespace "" --use_turtlebot_sim
 python3 -m web.backend.main --namespace ""
 ```
-11. The Gazebo simulator, RViz and a camera view should now open automatically, the web interface can be accessed at http://localhost:8000
+11. The camera view should come up and the web server is accessible at http://localhost:8000
