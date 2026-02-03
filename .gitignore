@@ -3,3 +3,4 @@ natural_language_processing/audio/
 yolo_models/
 .venv/
 *.log
+.env

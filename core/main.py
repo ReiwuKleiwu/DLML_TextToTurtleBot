@@ -1,8 +1,11 @@
 import argparse
 import rclpy
 from core.nodes.text_to_turtlebot_node import TextToTurtlebotNode
+from dotenv import load_dotenv
 
 def main(args=None):
+    load_dotenv()
+
     parser = argparse.ArgumentParser(description='Text to Turtlebot Node')
     parser.add_argument(
         '--namespace',

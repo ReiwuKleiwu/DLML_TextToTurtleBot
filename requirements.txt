@@ -13,3 +13,4 @@ fastapi
 uvicorn
 openai
 pyrealsense2
+python-dotenv
